@@ -8,7 +8,7 @@ authors = [
 ]
 dependencies = [
   "gymnasium",
-  "genesis @ git+https://github.com/Genesis-Embodied-AI/Genesis.git"
+  "genesis-world @ git+https://github.com/Genesis-Embodied-AI/Genesis.git",
 ]
 
 [project.optional-dependencies]

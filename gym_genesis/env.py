@@ -14,7 +14,8 @@ class GenesisEnv(gym.Env):
             observation_height = 480,
             observation_width = 640,
             num_envs = 1,
-            env_spacing = (1.0, 1.0)
+            env_spacing = (1.0, 1.0),
+            render_mode=None,
     ):
         super().__init__()
         self.task = task
@@ -23,6 +24,7 @@ class GenesisEnv(gym.Env):
         self.observation_width = observation_width
         self.num_envs = num_envs
         self.env_spacing = env_spacing
+        self.render_mode = render_mode
         self._env = self._make_env_task(self.task)
         self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
