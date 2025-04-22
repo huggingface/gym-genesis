@@ -22,7 +22,7 @@ class CubeTask:
                 camera_pos=(3, -1, 1.5),
                 camera_lookat=(0.0, 0.0, 0.5),
                 camera_fov=30,
-                res=(640, 480),
+                res=(self.observation_width, self.observation_height),
                 max_FPS=60,
             ),
             sim_options=gs.options.SimOptions(dt=0.01),
@@ -38,7 +38,7 @@ class CubeTask:
 
         if self.enable_pixels:
             self.cam = self.scene.add_camera(
-                res=(self.observation_height, self.observation_width),
+                res=(self.observation_width, self.observation_height),
                 pos=(3.5, 0.0, 2.5),
                 lookat=(0, 0, 0.5),
                 fov=30,
