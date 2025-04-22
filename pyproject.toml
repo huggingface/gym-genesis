@@ -6,7 +6,17 @@ authors = [
   { name = "Jade Choghari", email = "jchoghar@uwaterloo.ca" },
   { name = "Rémi Cadène", email = "re.cadene@gmail.com" }
 ]
-dependencies = ["gymnasium"]
+requires-python = ">=3.10"
+dependencies = [
+  "gymnasium",
+  "torch",
+  "genesis-world==0.2.1",
+]
+
+[project.optional-dependencies]
+examples = [
+  "lerobot @ git+https://github.com/huggingface/lerobot.git@main",
+]
 
 [build-system]
 requires = ["setuptools"]
