@@ -24,8 +24,7 @@ class GenesisEnv(gym.Env):
         self.num_envs = num_envs
         self.env_spacing = env_spacing
         self._env = self._make_env_task(self.task)
-        # add action space (TODO: check if compatible)
-        self.observation_space = self._make_obs_space()
+        self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
 
         # === Set up Genesis scene (task-specific env will populate it) ===
@@ -72,12 +71,3 @@ class GenesisEnv(gym.Env):
         else:
             raise NotImplementedError(task_name)
         return task
-
-    def _make_obs_space(self):
-        if self.enable_pixels:
-            return spaces.Dict({
-                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_envs, 20), dtype=np.float32),
-                "pixels": spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3), dtype=np.uint8),
-            })
-        else:
-            return spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_envs, 20), dtype=np.float32)

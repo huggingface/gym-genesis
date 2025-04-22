@@ -12,6 +12,7 @@ class CubeTask:
         self.num_envs = num_envs
         self._random = np.random.RandomState()
         self._build_scene(num_envs, env_spacing)
+        self.observation_space = self._make_obs_space()
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_envs, 9), dtype=np.float32)
 
     def _build_scene(self, num_envs, env_spacing):
@@ -50,6 +51,15 @@ class CubeTask:
         self.fingers_dof = np.arange(7, 9)
         self.eef = self.franka.get_link("hand")
 
+    def _make_obs_space(self):
+        if self.enable_pixels:
+            return spaces.Dict({
+                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_envs, 20), dtype=np.float32),
+                "pixels": spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3), dtype=np.uint8),
+            })
+        else:
+            return spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_envs, 20), dtype=np.float32)
+        
     def reset(self):
         B = self.num_envs
 
