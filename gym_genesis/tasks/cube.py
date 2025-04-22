@@ -12,7 +12,7 @@ class CubeTask:
         self.num_envs = num_envs
         self._random = np.random.RandomState()
         self._build_scene(num_envs, env_spacing)
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(9,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_envs, 9), dtype=np.float32)
 
     def _build_scene(self, num_envs, env_spacing):
         if not gs._initialized:
