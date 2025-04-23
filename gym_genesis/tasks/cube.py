@@ -87,8 +87,6 @@ class CubeTask:
             self.cam.start_recording()
 
         return self.get_obs()
-
-
         
     def seed(self, seed):
         np.random.seed(seed)
@@ -112,27 +110,25 @@ class CubeTask:
     
     def compute_reward(self):
         # Get z positions of cube in each env
-        z = self.cube.get_pos()  # (B, 3) if batched
-        if z.ndim == 2:
-            z = z[:, -1]
-            return (z > 0.1).float().cpu().numpy()  # shape: (B,)
-        else:
-            return float(z[-1] > 0.1)
+        z = self.cube.get_pos().cpu().numpy()  # shape: (B, 3)
+        z_height = z[:, -1]  # get the z (height) coordinate for each env
+        reward = (z_height > 0.1).astype(np.float32)  # shape: (B,)
+        return reward
 
     def get_obs(self):
         # === batched state features ===
-         # (B, X)
-        eef_pos = self.eef.get_pos().cpu().numpy()
-        eef_rot = self.eef.get_quat().cpu().numpy()
-        cube_pos = self.cube.get_pos().cpu().numpy()
-        cube_rot = self.cube.get_quat().cpu().numpy()
-        gripper = self.franka.get_dofs_position()[..., 7:9].cpu().numpy()
+        # (B, X)
+        eef_pos = self.eef.get_pos().cpu().numpy() # (B, 3)
+        eef_rot = self.eef.get_quat().cpu().numpy() # (B, 4)
+        cube_pos = self.cube.get_pos().cpu().numpy() # (B, 3)
+        cube_rot = self.cube.get_quat().cpu().numpy() # (B, 4)
+        gripper = self.franka.get_dofs_position()[..., 7:9].cpu().numpy() # (B, 2)
 
-        diff = eef_pos - cube_pos
-        dist = np.linalg.norm(diff, axis=1, keepdims=True)
+        diff = eef_pos - cube_pos # (B, 3)
+        dist = np.linalg.norm(diff, axis=1, keepdims=True) # (B, 1)
 
         state = np.concatenate([
-            eef_pos,      # (B, 3)
+            eef_pos,
             eef_rot,      
             cube_pos,  
             cube_rot,    
@@ -142,10 +138,19 @@ class CubeTask:
         ], axis=1)  # → shape: (B, 20)
 
         if self.enable_pixels:
+            # logic to grab all images in a batch
+            batch_imgs = []
+            for i in range(self.num_envs):
+                pos_i = self.scene.envs_offset[i] + np.array([3.5, 0.0, 2.5])
+                lookat_i = self.scene.envs_offset[i] + np.array([0, 0, 0.5])
+                self.cam.set_pose(pos=pos_i, lookat=lookat_i)
+                img = self.cam.render()[0]
+                batch_imgs.append(img)
+            pixels = np.stack(batch_imgs, axis=0)  # shape: (B, H, W, 3)
+            assert pixels.ndim == 4, f"pixels shape {pixels.shape} is not 4D (B, H, W, 3)"
             return {
                 "agent_pos": state.astype(np.float32), # (B, 20)
-                "pixels": self.cam.render()[0] # (B, H, W, 3)
+                "pixels": pixels, # (B, H, W, 3)
             }
 
         return state.astype(np.float32)  # (B, 20)
-

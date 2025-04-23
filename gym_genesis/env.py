@@ -56,8 +56,12 @@ class GenesisEnv(gym.Env):
     def close(self):
         pass
     
-    def _get_obs(self):
+    def get_obs(self):
         return self._env.get_obs()
+    
+    def get_robot(self):
+        #TODO: (jadechovhari) add assertion that a robot exist
+        return self._env.franka
 
     def render(self):
         return self._env.cam.render()[0] if self.enable_pixels else None
