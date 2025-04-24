@@ -55,7 +55,7 @@ class CubeTask:
         if self.enable_pixels:
             return spaces.Dict({
                 "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_envs, 20), dtype=np.float32),
-                "pixels": spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3), dtype=np.uint8),
+                "pixels": spaces.Box(low=0, high=255, shape=(self.num_envs, self.observation_height, self.observation_width, 3), dtype=np.uint8),
             })
         else:
             return spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_envs, 20), dtype=np.float32)

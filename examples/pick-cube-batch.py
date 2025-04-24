@@ -104,3 +104,41 @@ for ep in range(50):
             lerobot_dataset.save_episode()
         else:
             print(f"🚫 Skipping env {b} in episode — reward was always 0")
+
+#### Example for state only data collection
+# === Run Episodes ===
+for ep in range(50):
+    print(f"\n🎬 Starting episode {ep+1}")
+
+    # Reset environment (batched)
+    obs, _ = env.reset()
+    num_envs = obs.shape[0]   # (B, 20) if batched
+
+    # Store all frames for this episode
+    all_states, all_images, all_actions, all_rewards = [], [], [], []
+
+    for stage in ["hover", "stabilize", "grasp", "grasp", "lift"]:
+        for t in trange(40, leave=False):
+            action = expert_policy(env.get_robot(), obs, stage)         # (B, 9)
+            obs, reward, done, _, info = env.step(action)
+            all_states.append(obs)        # (B, 20)
+            all_actions.append(action)             # (B, 9)
+            all_rewards.append(reward)             # (B,)
+
+    states_arr = np.stack(all_states)      # (T, B, 20)
+    actions_arr = np.stack(all_actions)    # (T, B, 9)
+    rewards_arr = np.stack(all_rewards)    # (T, B)
+
+    # Save episodes where reward > 0 for each env in batch
+    for b in range(num_envs):
+        if np.any(rewards_arr[:, b] > 0):
+            print(f"✅ Saving env {b} — reward > 0 observed")
+            for t in range(rewards_arr.shape[0]):
+                lerobot_dataset.add_frame({
+                    "observation.state": states_arr[t, b].astype(np.float32),
+                    "action": actions_arr[t, b].astype(np.float32),
+                    "task": "pick cube",
+                })
+            lerobot_dataset.save_episode()
+        else:
+            print(f"🚫 Skipping env {b} in episode — reward was always 0")
