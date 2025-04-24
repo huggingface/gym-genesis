@@ -4,6 +4,18 @@ from gymnasium import spaces
 import random
 import torch
 
+joints_name = (
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6",
+    "joint7",
+    "finger_joint1",
+    "finger_joint2",
+)
+
 class CubeTask:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing):
         self.enable_pixels = enable_pixels
@@ -13,7 +25,7 @@ class CubeTask:
         self._random = np.random.RandomState()
         self._build_scene(num_envs, env_spacing)
         self.observation_space = self._make_obs_space()
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_envs, 9), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(len(joints_name),), dtype=np.float32)
 
     def _build_scene(self, num_envs, env_spacing):
         if not gs._initialized:
@@ -54,11 +66,11 @@ class CubeTask:
     def _make_obs_space(self):
         if self.enable_pixels:
             return spaces.Dict({
-                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_envs, 20), dtype=np.float32),
-                "pixels": spaces.Box(low=0, high=255, shape=(self.num_envs, self.observation_height, self.observation_width, 3), dtype=np.uint8),
+                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(20,), dtype=np.float32),
+                "pixels": spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3), dtype=np.uint8),
             })
         else:
-            return spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_envs, 20), dtype=np.float32)
+            return spaces.Box(low=-np.inf, high=np.inf, shape=(20,), dtype=np.float32)
         
     def reset(self):
         B = self.num_envs
