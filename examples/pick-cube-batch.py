@@ -135,7 +135,7 @@ for ep in range(50):
             print(f"✅ Saving env {b} — reward > 0 observed")
             for t in range(rewards_arr.shape[0]):
                 lerobot_dataset.add_frame({
-                    "observation.state": states_arr[t, b].astype(np.float32),
+                    "observation.environment_state": states_arr[t, b].astype(np.float32),
                     "action": actions_arr[t, b].astype(np.float32),
                     "task": "pick cube",
                 })
