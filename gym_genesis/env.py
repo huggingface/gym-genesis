@@ -42,17 +42,17 @@ class GenesisEnv(gym.Env):
 
         observation = self._env.reset()
 
-        info = {"is_success": False}
+        info = {"is_success": [False] * self.num_envs} 
         return observation, info
     
     def step(self, action):
         _, reward, _, observation = self._env.step(action)
+        is_success = (reward == 1)
+        terminated = is_success.tolist()
+        truncated = [False] * self.num_envs
 
-        terminated = is_success = reward == 1
+        info = {"is_success": is_success.tolist()}
 
-        info = {"is_success": is_success}
-
-        truncated = False
         return observation, reward, terminated, truncated, info
     
     def close(self):

@@ -116,10 +116,6 @@ class CubeTask:
         reward = self.compute_reward()
         obs = self.get_obs()
         return None, reward, None, obs
-
-    def compute_reward_1(self):
-        z = self.cube.get_pos().cpu().numpy()[-1]
-        return float(z > 0.1)
     
     def compute_reward(self):
         # Get z positions of cube in each env
@@ -170,7 +166,7 @@ class CubeTask:
                 raise ValueError(f"Unknown camera_capture_mode: {self.camera_capture_mode}")
             return {
                 "agent_pos": state.astype(np.float32), # (B, 20)
-                "pixels": pixels, # (B, H, W, 3)
+                "pixels": pixels, # (B, H, W, 3) or (H, W, 3)
             }
 
         return state.astype(np.float32)  # (B, 20)
