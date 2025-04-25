@@ -11,7 +11,7 @@ conda create -y -n genesis python=3.10 && conda activate genesis
 
 Install gym-aloha:
 ```bash
-git clone https://github.com/jadechoghari/gym-genesis.git
+git clone https://github.com/huggingface/gym-genesis.git
 cd gym-genesis
 pip install -e . # or pip install -e .[lerobot]
 ```
