@@ -10,6 +10,7 @@ env = gym.make(
     enable_pixels=True,
     camera_capture_mode="per_env",
 )
+env = env.unwrapped
 
 def expert_policy(robot, observation_state, stage):
     """
@@ -69,7 +70,7 @@ for ep in range(50):
 
     # Reset environment (batched)
     obs, _ = env.reset()
-    num_envs = obs[0]["agent_pos"].shape[0]   # (B, 20) if batched
+    num_envs = obs["agent_pos"].shape[0]   # (B, 20) if batched
 
     # Store all frames for this episode
     all_states, all_images, all_actions, all_rewards = [], [], [], []
