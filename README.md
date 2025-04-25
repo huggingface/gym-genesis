@@ -44,3 +44,5 @@ for _ in range(1000):
 
 imageio.mimsave("example.mp4", np.stack(frames), fps=25)
 ```
+
+**Natively Vectorized:** All environments run in parallel on the GPU as a single batched tensor operation. No multi-processing.
