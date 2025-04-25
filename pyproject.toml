@@ -6,7 +6,15 @@ authors = [
   { name = "Jade Choghari", email = "jchoghar@uwaterloo.ca" },
   { name = "Rémi Cadène", email = "re.cadene@gmail.com" }
 ]
-dependencies = ["gymnasium"]
+dependencies = [
+  "gymnasium",
+  "genesis-world @ git+https://github.com/Genesis-Embodied-AI/Genesis.git",
+]
+
+[project.optional-dependencies]
+lerobot = [
+  "lerobot @ git+https://github.com/huggingface/lerobot.git@main"
+]
 
 [build-system]
 requires = ["setuptools"]
