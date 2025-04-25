@@ -16,6 +16,7 @@ class GenesisEnv(gym.Env):
             num_envs = 1,
             env_spacing = (1.0, 1.0),
             render_mode=None,
+            camera_capture_mode="per_env" # or "global",
     ):
         super().__init__()
         self.task = task
@@ -25,6 +26,7 @@ class GenesisEnv(gym.Env):
         self.num_envs = num_envs
         self.env_spacing = env_spacing
         self.render_mode = render_mode
+        self.camera_capture_mode = camera_capture_mode
         self._env = self._make_env_task(self.task)
         self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
@@ -46,7 +48,7 @@ class GenesisEnv(gym.Env):
     def step(self, action):
         _, reward, _, observation = self._env.step(action)
 
-        terminated = is_success = reward == 4
+        terminated = is_success = reward == 1
 
         info = {"is_success": is_success}
 
@@ -72,7 +74,8 @@ class GenesisEnv(gym.Env):
                             observation_height=self.observation_height, 
                             observation_width=self.observation_width,
                             num_envs = self.num_envs,
-                            env_spacing = self.env_spacing
+                            env_spacing = self.env_spacing,
+                            camera_capture_mode = self.camera_capture_mode,
                             )
         else:
             raise NotImplementedError(task_name)

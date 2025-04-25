@@ -17,7 +17,7 @@ joints_name = (
 )
 
 class CubeTask:
-    def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing):
+    def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode):
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
         self.observation_width = observation_width
@@ -26,6 +26,7 @@ class CubeTask:
         self._build_scene(num_envs, env_spacing)
         self.observation_space = self._make_obs_space()
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(len(joints_name),), dtype=np.float32)
+        self.camera_capture_mode = camera_capture_mode
 
     def _build_scene(self, num_envs, env_spacing):
         if not gs._initialized:
@@ -150,16 +151,23 @@ class CubeTask:
         ], axis=1)  # → shape: (B, 20)
 
         if self.enable_pixels:
-            # logic to grab all images in a batch
-            batch_imgs = []
-            for i in range(self.num_envs):
-                pos_i = self.scene.envs_offset[i] + np.array([3.5, 0.0, 2.5])
-                lookat_i = self.scene.envs_offset[i] + np.array([0, 0, 0.5])
-                self.cam.set_pose(pos=pos_i, lookat=lookat_i)
-                img = self.cam.render()[0]
-                batch_imgs.append(img)
-            pixels = np.stack(batch_imgs, axis=0)  # shape: (B, H, W, 3)
-            assert pixels.ndim == 4, f"pixels shape {pixels.shape} is not 4D (B, H, W, 3)"
+            if self.camera_capture_mode == "per_env":
+                # Capture a separate image for each environment
+                batch_imgs = []
+                for i in range(self.num_envs):
+                    pos_i = self.scene.envs_offset[i] + np.array([3.5, 0.0, 2.5])
+                    lookat_i = self.scene.envs_offset[i] + np.array([0, 0, 0.5])
+                    self.cam.set_pose(pos=pos_i, lookat=lookat_i)
+                    img = self.cam.render()[0]
+                    batch_imgs.append(img)
+                pixels = np.stack(batch_imgs, axis=0)  # shape: (B, H, W, 3)
+                assert pixels.ndim == 4, f"pixels shape {pixels.shape} is not 4D (B, H, W, 3)"
+            elif self.camera_capture_mode == "global":
+                # Capture a single global/overview image
+                pixels = self.cam.render()[0]  # shape: (H, W, 3)
+                assert pixels.ndim == 3, f"pixels shape {pixels.shape} is not 3D (H, W, 3)"
+            else:
+                raise ValueError(f"Unknown camera_capture_mode: {self.camera_capture_mode}")
             return {
                 "agent_pos": state.astype(np.float32), # (B, 20)
                 "pixels": pixels, # (B, H, W, 3)

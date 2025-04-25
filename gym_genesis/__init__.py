@@ -12,5 +12,6 @@ register(
         "observation_height": 480,
         "observation_width": 640,
         "env_spacing": (1.0, 1.0),
+        "camera_capture_mode": "global",
     },
 )
