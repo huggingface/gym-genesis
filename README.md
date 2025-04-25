@@ -31,8 +31,8 @@ frames = []
 
 for _ in range(1000):
     # sample a batch of actions
-    action = env.action_space.sample((env.num_envs,))
-    obs, reward, terminated, truncated, info = env.step(action)
+    actions = np.stack([env.action_space.sample() for _ in range(env.num_envs)])
+    obs, reward, terminated, truncated, info = env.step(actions)
 
     # render returns a single image representing all envs
     image = env.render()
