@@ -68,9 +68,9 @@ class CubeTask:
 
     def _make_obs_space(self):
         if self.enable_pixels:
+            # we explicity remove the need of environment_state
             return spaces.Dict({
                 "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(AGENT_DIM,), dtype=np.float32),
-                "environment_state": spaces.Box(low=-np.inf, high=np.inf, shape=(ENV_DIM,), dtype=np.float32),
                 "pixels": spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3), dtype=np.uint8),
             })
         else:
@@ -153,6 +153,8 @@ class CubeTask:
         }
 
         if self.enable_pixels:
+            #TODO (jadechoghari): it's hacky but keep it for the sake of saving time
+            del obs["environment_state"]
             if self.camera_capture_mode == "per_env":
                 # Capture a separate image for each environment
                 batch_imgs = []
@@ -171,5 +173,4 @@ class CubeTask:
             else:
                 raise ValueError(f"Unknown camera_capture_mode: {self.camera_capture_mode}")
             obs["pixels"] = pixels
-
         return obs
