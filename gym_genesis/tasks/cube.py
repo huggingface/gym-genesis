@@ -66,7 +66,7 @@ class CubeTask:
 
     def _make_obs_space(self):
         # Determine shapes dynamically if needed
-        agent_shape = (20,)
+        agent_shape = (9,)
         env_shape = (11,)
 
         if self.enable_pixels:
