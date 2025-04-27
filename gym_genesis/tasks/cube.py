@@ -15,6 +15,8 @@ joints_name = (
     "finger_joint1",
     "finger_joint2",
 )
+AGENT_DIM = len(joints_name)
+ENV_DIM = 11
 
 class CubeTask:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode):
@@ -25,7 +27,7 @@ class CubeTask:
         self._random = np.random.RandomState()
         self._build_scene(num_envs, env_spacing)
         self.observation_space = self._make_obs_space()
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(len(joints_name),), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(AGENT_DIM,), dtype=np.float32)
         self.camera_capture_mode = camera_capture_mode
 
     def _build_scene(self, num_envs, env_spacing):
@@ -65,20 +67,16 @@ class CubeTask:
         self.eef = self.franka.get_link("hand")
 
     def _make_obs_space(self):
-        # Determine shapes dynamically if needed
-        agent_shape = (9,)
-        env_shape = (11,)
-
         if self.enable_pixels:
             return spaces.Dict({
-                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=agent_shape, dtype=np.float32),
-                "environment_state": spaces.Box(low=-np.inf, high=np.inf, shape=env_shape, dtype=np.float32),
+                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(AGENT_DIM,), dtype=np.float32),
+                "environment_state": spaces.Box(low=-np.inf, high=np.inf, shape=(ENV_DIM,), dtype=np.float32),
                 "pixels": spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3), dtype=np.uint8),
             })
         else:
             return spaces.Dict({
-                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=agent_shape, dtype=np.float32),
-                "environment_state": spaces.Box(low=-np.inf, high=np.inf, shape=env_shape, dtype=np.float32),
+                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(AGENT_DIM,), dtype=np.float32),
+                "environment_state": spaces.Box(low=-np.inf, high=np.inf, shape=(ENV_DIM,), dtype=np.float32),
             })
     
     def reset(self):
