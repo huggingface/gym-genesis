@@ -79,14 +79,13 @@ for ep in range(50):
     num_envs = obs["agent_pos"].shape[0]   # (B, 20) if batched
 
     # Store all frames for this episode
-    all_agent_states, all_env_states, all_images, all_actions, all_rewards = [], [], [], [], []
+    all_agent_states, all_images, all_actions, all_rewards = [], [], [], [], []
 
     for stage in ["hover", "stabilize", "grasp", "grasp", "lift"]:
         for t in trange(40, leave=False):
             action = expert_policy(env.get_robot(), obs, stage)         # (B, 9)
             obs, reward, done, _, info = env.step(action)  # obs: dict of batched arrays
             all_agent_states.append(obs["agent_pos"])              # (B, agent_dim)
-            all_env_states.append(obs["environment_state"])        # (B, env_dim)
             all_images.append(obs["pixels"])       # (B, H, W, 3)
             all_actions.append(action)             # (B, 9)
             all_rewards.append(reward)             # (B,)
@@ -94,7 +93,6 @@ for ep in range(50):
     # Convert to arrays (T, B, ...)
     #FIXME: system ram crash if B is too big
     agent_states_arr = np.stack(all_agent_states)      # (T, B, agent_dim)
-    env_states_arr = np.stack(all_env_states)          # (T, B, env_dim)
     actions_arr = np.stack(all_actions)    # (T, B, 9)
     images_arr = np.stack(all_images)      # (T, B, H, W, 3)
     rewards_arr = np.stack(all_rewards)    # (T, B)
