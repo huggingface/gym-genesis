@@ -127,24 +127,25 @@ class CubeTask:
     def get_obs(self):
         # === batched state features ===
         # (B, X)
+        # === agent (robot) state features ===
         eef_pos = self.eef.get_pos().cpu().numpy() # (B, 3)
         eef_rot = self.eef.get_quat().cpu().numpy() # (B, 4)
-        cube_pos = self.cube.get_pos().cpu().numpy() # (B, 3)
-        cube_rot = self.cube.get_quat().cpu().numpy() # (B, 4)
         gripper = self.franka.get_dofs_position()[..., 7:9].cpu().numpy() # (B, 2)
 
-        diff = eef_pos - cube_pos # (B, 3)
-        dist = np.linalg.norm(diff, axis=1, keepdims=True) # (B, 1)
+        # === environment (object) state features ===
+        cube_pos = self.cube.get_pos().cpu().numpy() # (B, 3)
+        cube_rot = self.cube.get_quat().cpu().numpy() # (B, 4)
+        diff = eef_pos - cube_pos # (B, 3) (privileged)
+        dist = np.linalg.norm(diff, axis=1, keepdims=True) # (B, 1) (privileged)
 
-        state = np.concatenate([
-            eef_pos,
-            eef_rot,      
-            cube_pos,  
-            cube_rot,    
-            gripper,      
-            diff,        
-            dist         
-        ], axis=1)  # → shape: (B, 20)
+        # compose observation dicts
+        agent_pos = np.concatenate([eef_pos, eef_rot, gripper], axis=1)         # (B, 9)
+        environment_state = np.concatenate([cube_pos, cube_rot, diff, dist], axis=1)  # (B, 11)
+
+        obs = {
+            "agent_pos": agent_pos.astype(np.float32),                  # (B, 9)
+            "environment_state": environment_state.astype(np.float32),  # (B, 11)
+        }
 
         if self.enable_pixels:
             if self.camera_capture_mode == "per_env":
@@ -164,9 +165,6 @@ class CubeTask:
                 assert pixels.ndim == 3, f"pixels shape {pixels.shape} is not 3D (H, W, 3)"
             else:
                 raise ValueError(f"Unknown camera_capture_mode: {self.camera_capture_mode}")
-            return {
-                "agent_pos": state.astype(np.float32), # (B, 20)
-                "pixels": pixels, # (B, H, W, 3) or (H, W, 3)
-            }
+            obs["pixels"] = pixels
 
-        return state.astype(np.float32)  # (B, 20)
+        return obs

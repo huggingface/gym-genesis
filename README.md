@@ -9,7 +9,7 @@ Create a virtual environment with Python 3.10 and activate it, e.g. with [`minic
 conda create -y -n genesis python=3.10 && conda activate genesis
 ```
 
-Install gym-aloha:
+Install gym-genesis:
 ```bash
 git clone https://github.com/huggingface/gym-genesis.git
 cd gym-genesis
@@ -46,3 +46,6 @@ imageio.mimsave("example.mp4", np.stack(frames), fps=25)
 ```
 
 **Natively Vectorized:** All environments run in parallel on the GPU as a single batched tensor operation. No multi-processing.
+
+The input and outputs of the environment are not numpy arrays, but rather based on torch tensors with the first dimension being the number of environment instances.
+
