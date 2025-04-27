@@ -2,6 +2,7 @@ import gymnasium as gym
 import genesis as gs
 import numpy as np
 from gymnasium import spaces
+import warnings
 from gym_genesis.tasks.cube import CubeTask
 class GenesisEnv(gym.Env):
 
@@ -55,6 +56,16 @@ class GenesisEnv(gym.Env):
 
         return observation, reward, terminated, truncated, info
     
+    def save_video(self, save_video: bool = False, file_name: str = "episode.mp4", fps=60):
+        if self.enable_pixels and save_video:
+            warnings.warn(
+                "Calling `save_video()` will immediately stop the camera recording. "
+                "You will not be able to record additional frames after this call. "
+                "Call this method only when you are finished recording your episode.",
+                stacklevel=2,
+            )
+            self._env.cam.stop_recording(save_to_filename=file_name, fps=fps)
+
     def close(self):
         pass
     

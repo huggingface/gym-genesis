@@ -65,14 +65,22 @@ class CubeTask:
         self.eef = self.franka.get_link("hand")
 
     def _make_obs_space(self):
+        # Determine shapes dynamically if needed
+        agent_shape = (20,)
+        env_shape = (11,)
+
         if self.enable_pixels:
             return spaces.Dict({
-                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(20,), dtype=np.float32),
+                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=agent_shape, dtype=np.float32),
+                "environment_state": spaces.Box(low=-np.inf, high=np.inf, shape=env_shape, dtype=np.float32),
                 "pixels": spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3), dtype=np.uint8),
             })
         else:
-            return spaces.Box(low=-np.inf, high=np.inf, shape=(20,), dtype=np.float32)
-        
+            return spaces.Dict({
+                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=agent_shape, dtype=np.float32),
+                "environment_state": spaces.Box(low=-np.inf, high=np.inf, shape=env_shape, dtype=np.float32),
+            })
+    
     def reset(self):
         B = self.num_envs
 
