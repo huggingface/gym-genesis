@@ -49,8 +49,8 @@ class GenesisEnv(gym.Env):
     def step(self, action):
         _, reward, _, observation = self._env.step(action)
         is_success = (reward == 1)
-        terminated = is_success.tolist()
-        truncated = [False] * self.num_envs
+        terminated = np.array(is_success, dtype=bool)
+        truncated = np.zeros(self.num_envs, dtype=bool)  # All False
 
         info = {"is_success": is_success.tolist()}
 
