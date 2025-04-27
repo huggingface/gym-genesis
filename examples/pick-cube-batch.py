@@ -12,13 +12,15 @@ env = gym.make(
 )
 env = env.unwrapped
 
-def expert_policy(robot, observation_state, stage):
+def expert_policy(robot, observation, stage):
     """
     Batched expert policy for all environments in parallel.
     Returns actions of shape (B, 9).
     """
-    B = observation_state.shape[0]
-    cube_pos = observation_state[:, 7:10]
+    agent_pos = observation["agent_pos"]
+    environment_state = observation["environment_state"]
+    B = agent_pos.shape[0]
+    cube_pos = environment_state[:, :3]
     finder_pos = -0.02
     quat = np.array([0, 1, 0, 0], dtype=np.float32)     # (4,)
     quat_batch = np.tile(quat, (B, 1))                  # (B, 4)
@@ -77,7 +79,7 @@ for ep in range(50):
 
     for stage in ["hover", "stabilize", "grasp", "grasp", "lift"]:
         for t in trange(40, leave=False):
-            action = expert_policy(env.get_robot(), obs["agent_pos"], stage)         # (B, 9)
+            action = expert_policy(env.get_robot(), obs, stage)         # (B, 9)
             obs, reward, done, _, info = env.step(action)  # obs: dict of batched arrays
             all_states.append(obs["agent_pos"])        # (B, 20)
             all_images.append(obs["pixels"])       # (B, H, W, 3)
@@ -114,7 +116,7 @@ for ep in range(50):
 
     # Reset environment (batched)
     obs, _ = env.reset()
-    num_envs = obs.shape[0]   # (B, 20) if batched
+    num_envs = obs["agent_pos"].shape[0]   # (B, 20) if batched
 
     # Store all frames for this episode
     all_states, all_images, all_actions, all_rewards = [], [], [], []

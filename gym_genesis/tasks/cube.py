@@ -125,7 +125,6 @@ class CubeTask:
         return reward
 
     def get_obs(self):
-        # === batched state features ===
         # (B, X)
         # === agent (robot) state features ===
         eef_pos = self.eef.get_pos().cpu().numpy() # (B, 3)
