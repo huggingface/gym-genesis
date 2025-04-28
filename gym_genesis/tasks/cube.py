@@ -15,6 +15,8 @@ joints_name = (
     "finger_joint1",
     "finger_joint2",
 )
+AGENT_DIM = len(joints_name)
+ENV_DIM = 11
 
 class CubeTask:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode):
@@ -25,7 +27,7 @@ class CubeTask:
         self._random = np.random.RandomState()
         self._build_scene(num_envs, env_spacing)
         self.observation_space = self._make_obs_space()
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(len(joints_name),), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(AGENT_DIM,), dtype=np.float32)
         self.camera_capture_mode = camera_capture_mode
 
     def _build_scene(self, num_envs, env_spacing):
@@ -66,13 +68,17 @@ class CubeTask:
 
     def _make_obs_space(self):
         if self.enable_pixels:
+            # we explicity remove the need of environment_state
             return spaces.Dict({
-                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(20,), dtype=np.float32),
+                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(AGENT_DIM,), dtype=np.float32),
                 "pixels": spaces.Box(low=0, high=255, shape=(self.observation_height, self.observation_width, 3), dtype=np.uint8),
             })
         else:
-            return spaces.Box(low=-np.inf, high=np.inf, shape=(20,), dtype=np.float32)
-        
+            return spaces.Dict({
+                "agent_pos": spaces.Box(low=-np.inf, high=np.inf, shape=(AGENT_DIM,), dtype=np.float32),
+                "environment_state": spaces.Box(low=-np.inf, high=np.inf, shape=(ENV_DIM,), dtype=np.float32),
+            })
+    
     def reset(self):
         B = self.num_envs
 
@@ -125,28 +131,30 @@ class CubeTask:
         return reward
 
     def get_obs(self):
-        # === batched state features ===
         # (B, X)
+        # === agent (robot) state features ===
         eef_pos = self.eef.get_pos().cpu().numpy() # (B, 3)
         eef_rot = self.eef.get_quat().cpu().numpy() # (B, 4)
-        cube_pos = self.cube.get_pos().cpu().numpy() # (B, 3)
-        cube_rot = self.cube.get_quat().cpu().numpy() # (B, 4)
         gripper = self.franka.get_dofs_position()[..., 7:9].cpu().numpy() # (B, 2)
 
-        diff = eef_pos - cube_pos # (B, 3)
-        dist = np.linalg.norm(diff, axis=1, keepdims=True) # (B, 1)
+        # === environment (object) state features ===
+        cube_pos = self.cube.get_pos().cpu().numpy() # (B, 3)
+        cube_rot = self.cube.get_quat().cpu().numpy() # (B, 4)
+        diff = eef_pos - cube_pos # (B, 3) (privileged)
+        dist = np.linalg.norm(diff, axis=1, keepdims=True) # (B, 1) (privileged)
 
-        state = np.concatenate([
-            eef_pos,
-            eef_rot,      
-            cube_pos,  
-            cube_rot,    
-            gripper,      
-            diff,        
-            dist         
-        ], axis=1)  # → shape: (B, 20)
+        # compose observation dicts
+        agent_pos = np.concatenate([eef_pos, eef_rot, gripper], axis=1)         # (B, 9)
+        environment_state = np.concatenate([cube_pos, cube_rot, diff, dist], axis=1)  # (B, 11)
+
+        obs = {
+            "agent_pos": agent_pos.astype(np.float32),                  # (B, 9)
+            "environment_state": environment_state.astype(np.float32),  # (B, 11)
+        }
 
         if self.enable_pixels:
+            #TODO (jadechoghari): it's hacky but keep it for the sake of saving time
+            del obs["environment_state"]
             if self.camera_capture_mode == "per_env":
                 # Capture a separate image for each environment
                 batch_imgs = []
@@ -164,9 +172,5 @@ class CubeTask:
                 assert pixels.ndim == 3, f"pixels shape {pixels.shape} is not 3D (H, W, 3)"
             else:
                 raise ValueError(f"Unknown camera_capture_mode: {self.camera_capture_mode}")
-            return {
-                "agent_pos": state.astype(np.float32), # (B, 20)
-                "pixels": pixels, # (B, H, W, 3) or (H, W, 3)
-            }
-
-        return state.astype(np.float32)  # (B, 20)
+            obs["pixels"] = pixels
+        return obs

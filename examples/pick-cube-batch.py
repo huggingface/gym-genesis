@@ -12,13 +12,15 @@ env = gym.make(
 )
 env = env.unwrapped
 
-def expert_policy(robot, observation_state, stage):
+def expert_policy(robot, observation, stage):
     """
     Batched expert policy for all environments in parallel.
     Returns actions of shape (B, 9).
     """
-    B = observation_state.shape[0]
-    cube_pos = observation_state[:, 7:10]
+    agent_pos = observation["agent_pos"]
+    environment_state = observation["environment_state"]
+    B = agent_pos.shape[0]
+    cube_pos = environment_state[:, :3]
     finder_pos = -0.02
     quat = np.array([0, 1, 0, 0], dtype=np.float32)     # (4,)
     quat_batch = np.tile(quat, (B, 1))                  # (B, 4)
@@ -50,6 +52,9 @@ def expert_policy(robot, observation_state, stage):
     return action
 
 # === Setup Dataset ===
+agent_shape = (9,)
+action_shape = (9,)
+env_shape = (11,)
 dataset_path = Path("data/cube_genesis")
 lerobot_dataset = LeRobotDataset.create(
     repo_id=None,
@@ -58,9 +63,10 @@ lerobot_dataset = LeRobotDataset.create(
     fps=60,
     use_videos=True,
     features={
-        "observation.state": {"dtype": "float32", "shape": (20,)},
-        "action": {"dtype": "float32", "shape": (9,)},
-        "observation.image": {"dtype": "video", "shape": (480, 640, 3)},
+        "observation.agent_pos": {"dtype": "float32", "shape": agent_shape}, 
+        "observation.environment_state": {"dtype": "float32", "shape": env_shape}, # comment this to hide env info from policy
+        "action": {"dtype": "float32", "shape": action_shape},
+        "observation.image": {"dtype": "video", "shape": (480, 640, 3)}, # comment for state-only training
     },
 )
 
@@ -73,20 +79,20 @@ for ep in range(50):
     num_envs = obs["agent_pos"].shape[0]   # (B, 20) if batched
 
     # Store all frames for this episode
-    all_states, all_images, all_actions, all_rewards = [], [], [], []
+    all_agent_states, all_images, all_actions, all_rewards = [], [], [], [], []
 
     for stage in ["hover", "stabilize", "grasp", "grasp", "lift"]:
         for t in trange(40, leave=False):
-            action = expert_policy(env.get_robot(), obs["agent_pos"], stage)         # (B, 9)
+            action = expert_policy(env.get_robot(), obs, stage)         # (B, 9)
             obs, reward, done, _, info = env.step(action)  # obs: dict of batched arrays
-            all_states.append(obs["agent_pos"])        # (B, 20)
+            all_agent_states.append(obs["agent_pos"])              # (B, agent_dim)
             all_images.append(obs["pixels"])       # (B, H, W, 3)
             all_actions.append(action)             # (B, 9)
             all_rewards.append(reward)             # (B,)
 
     # Convert to arrays (T, B, ...)
     #FIXME: system ram crash if B is too big
-    states_arr = np.stack(all_states)      # (T, B, 20)
+    agent_states_arr = np.stack(all_agent_states)      # (T, B, agent_dim)
     actions_arr = np.stack(all_actions)    # (T, B, 9)
     images_arr = np.stack(all_images)      # (T, B, H, W, 3)
     rewards_arr = np.stack(all_rewards)    # (T, B)
@@ -98,7 +104,7 @@ for ep in range(50):
             print(f"✅ Saving env {b} — reward > 0 observed")
             for t in range(rewards_arr.shape[0]):
                 lerobot_dataset.add_frame({
-                    "observation.state": states_arr[t, b].astype(np.float32),
+                    "observation.state": agent_states_arr[t, b].astype(np.float32),
                     "action": actions_arr[t, b].astype(np.float32),
                     "observation.image": images_arr[t, b],
                     "task": "pick cube",
@@ -114,30 +120,36 @@ for ep in range(50):
 
     # Reset environment (batched)
     obs, _ = env.reset()
-    num_envs = obs.shape[0]   # (B, 20) if batched
+    num_envs = obs["agent_pos"].shape[0]   # (B, 20) if batched
 
     # Store all frames for this episode
-    all_states, all_images, all_actions, all_rewards = [], [], [], []
+    all_agent_states, all_env_states, all_actions, all_rewards = [], [], [], []
 
     for stage in ["hover", "stabilize", "grasp", "grasp", "lift"]:
         for t in trange(40, leave=False):
             action = expert_policy(env.get_robot(), obs, stage)         # (B, 9)
-            obs, reward, done, _, info = env.step(action)
-            all_states.append(obs)        # (B, 20)
+            obs, reward, done, _, info = env.step(action)  # obs: dict of batched arrays
+            all_agent_states.append(obs["agent_pos"])              # (B, agent_dim)
+            all_env_states.append(obs["environment_state"])        # (B, env_dim)
             all_actions.append(action)             # (B, 9)
             all_rewards.append(reward)             # (B,)
 
-    states_arr = np.stack(all_states)      # (T, B, 20)
+    # Convert to arrays (T, B, ...)
+    #FIXME: system ram crash if B is too big
+    agent_states_arr = np.stack(all_agent_states)      # (T, B, agent_dim)
+    env_states_arr = np.stack(all_env_states)          # (T, B, env_dim)
     actions_arr = np.stack(all_actions)    # (T, B, 9)
     rewards_arr = np.stack(all_rewards)    # (T, B)
 
     # Save episodes where reward > 0 for each env in batch
     for b in range(num_envs):
+        # If any reward > 0 in this env across time
         if np.any(rewards_arr[:, b] > 0):
             print(f"✅ Saving env {b} — reward > 0 observed")
             for t in range(rewards_arr.shape[0]):
                 lerobot_dataset.add_frame({
-                    "observation.environment_state": states_arr[t, b].astype(np.float32),
+                    "observation.state": agent_states_arr[t, b].astype(np.float32),
+                    "observation.environment_state": env_states_arr[t, b].astype(np.float32),
                     "action": actions_arr[t, b].astype(np.float32),
                     "task": "pick cube",
                 })
