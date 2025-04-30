@@ -81,7 +81,15 @@ class CubeStack:
             gs.morphs.MJCF(file="xml/franka_emika_panda/panda.xml"),
             vis_mode="collision",
         )
-
+        
+        if self.enable_pixels:
+            self.cam = self.scene.add_camera(
+                res=(self.observation_width, self.observation_height),
+                pos=(3.5, 0.0, 2.5),
+                lookat=(0, 0, 0.5),
+                fov=30,
+                GUI=False
+            )
         # === Build with batch support ===
         self.scene.build(n_envs=num_envs, env_spacing=env_spacing)
         self.motors_dof = np.arange(7)
@@ -123,12 +131,12 @@ class CubeStack:
         self.cube_2.set_quat(quat)
 
         # === Randomize color and add language task ===
-        colors = list(color_dict.keys())
-        pick_color, place_color = np.random.choice(colors, size=2, replace=False)
+        # colors = list(color_dict.keys())
+        # pick_color, place_color = np.random.choice(colors, size=2, replace=False)
 
-        self.cube_1.set_color(self.color_dict[pick_color])
-        self.cube_2.set_color(self.color_dict[place_color])
-        self.task = f"pick up the {pick_color} cube and place it on top of the {place_color} cube"
+        # self.cube_1.set_color(self.color_dict[pick_color])
+        # self.cube_2.set_color(self.color_dict[place_color])
+        # self.task = f"pick up the {pick_color} cube and place it on top of the {place_color} cube"
 
         # === Distractor cubes ===
         #TODO: (jadechoghari) make it optional?
