@@ -3,7 +3,7 @@ import genesis as gs
 import numpy as np
 from gymnasium import spaces
 import warnings
-from gym_genesis.tasks.cube import CubeTask
+from gym_genesis.tasks.cube_pick import CubeTask
 class GenesisEnv(gym.Env):
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
