@@ -4,6 +4,7 @@ import numpy as np
 from gymnasium import spaces
 import warnings
 from gym_genesis.tasks.cube_pick import CubeTask
+from gym_genesis.tasks.cube_stack import CubeStack
 class GenesisEnv(gym.Env):
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
@@ -82,6 +83,14 @@ class GenesisEnv(gym.Env):
     def _make_env_task(self, task_name):
         if task_name == "cube":
             task = CubeTask(enable_pixels=self.enable_pixels,
+                            observation_height=self.observation_height, 
+                            observation_width=self.observation_width,
+                            num_envs = self.num_envs,
+                            env_spacing = self.env_spacing,
+                            camera_capture_mode = self.camera_capture_mode,
+                            )
+        elif task_name == "cube_stack":
+            task = CubeStack(enable_pixels=self.enable_pixels,
                             observation_height=self.observation_height, 
                             observation_width=self.observation_width,
                             num_envs = self.num_envs,
