@@ -16,7 +16,7 @@ joints_name = (
     "finger_joint2",
 )
 AGENT_DIM = len(joints_name)
-ENV_DIM = 11
+ENV_DIM = 14
 color_dict = {
     "red":   (1.0, 0.0, 0.0, 1.0),
     "green": (0.0, 1.0, 0.0, 1.0),
@@ -92,7 +92,7 @@ class CubeStackV2:
                 fov=30,
                 GUI=False
             )
-            
+
         self.scene.build()
         self.motors_dof = np.arange(7)
         self.fingers_dof = np.arange(7, 9)
@@ -146,6 +146,8 @@ class CubeStackV2:
         self.franka.control_dofs_position(qpos_tensor[:7], self.motors_dof)
         self.franka.control_dofs_position(qpos_tensor[7:], self.fingers_dof)
         self.scene.step()
+
+        # Optional, but we add it since it improves stability
         self.franka.set_dofs_kp(np.array([4500, 4500, 3500, 3500, 2000, 2000, 2000, 100, 100]))
         self.franka.set_dofs_kv(np.array([450, 450, 350, 350, 200, 200, 200, 10, 10]))
         self.franka.set_dofs_force_range(
@@ -157,8 +159,6 @@ class CubeStackV2:
             self.cam.start_recording()
 
         return self.get_obs()
-
-
         
     def seed(self, seed):
         np.random.seed(seed)
@@ -209,11 +209,16 @@ class CubeStackV2:
 
         # === Compose state ===
         agent_pos = np.concatenate([eef_pos, eef_rot, gripper], axis=0).astype(np.float32)         # (9,)
-        environment_state = np.concatenate([cube1_pos, cube1_rot, diff, dist], axis=0).astype(np.float32)  # (11,)
+        environment_state = np.concatenate([
+            cube1_pos,        # (3,)
+            cube1_rot,        # (4,)
+            diff,             # (3,)
+            dist,             # (1,)
+            cube2_pos         # (3,)
+        ], axis=0).astype(np.float32)  # 14-D
 
         obs = {
             "agent_pos": agent_pos,
             "environment_state": environment_state,
-            "cube2_pos": cube2_pos,
         }
         return obs

@@ -18,7 +18,7 @@ def expert_policy(robot, obs, stage):
     quat = np.array([0, 1, 0, 0], dtype=np.float32)
 
     cube1_pos = obs["environment_state"][:3]
-    cube2_pos = obs["cube2_pos"]
+    cube2_pos = obs["environment_state"][11:14]
 
     grip_open = 0.04
     grip_closed = -0.02
@@ -82,6 +82,6 @@ def expert_policy(robot, obs, stage):
 obs, _ = env.reset()
 for stage in ["hover", "grasp", "lift", "place", "release"]:
     print(f"==> Executing stage: {stage}")
-    action_path = expert_policy(env.get_robot(), obs, stage, env.get_scene(), env.get_cube())
+    action_path = expert_policy(env.get_robot(), obs, stage)
     for action in action_path:  # each action is (9,)
         obs, reward, done, _, _ = env.step(action)
