@@ -3,7 +3,7 @@ from tqdm import trange
 from pathlib import Path
 import gym_genesis
 import gymnasium as gym
-print("XXX")
+
 env = gym.make(
     "gym_genesis/CubeStack-v0",
     enable_pixels=False,

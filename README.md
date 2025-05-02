@@ -24,8 +24,7 @@ import gymnasium as gym
 import gym_genesis
 import numpy as np
 import imageio
-env = gym.make("gym_genesis/CubeStack-v0", enable_pixels=True, num_envs=3)
-# env = gym.make("gym_genesis/CubePick-v0", enable_pixels=True, num_envs=10)
+env = gym.make("gym_genesis/CubePick-v0", enable_pixels=True, num_envs=10)
 obs, info = env.reset()
 frames = []
 
