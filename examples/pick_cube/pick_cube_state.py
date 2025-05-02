@@ -7,7 +7,7 @@ import gymnasium as gym
 
 env = gym.make(
     "gym_genesis/CubePick-v0",
-    enable_pixels=False,
+    enable_pixels=True,
 )
 env = env.unwrapped
 
