@@ -2,12 +2,13 @@ import numpy as np
 from tqdm import trange
 from pathlib import Path
 import torch
+from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import genesis as gs
 import gym_genesis
 import gymnasium as gym
 env = gym.make(
     "gym_genesis/CubeStack-v0",
-    enable_pixels=False,
+    enable_pixels=True,
     camera_capture_mode="per_env",
     num_envs=3
 )
@@ -104,11 +105,63 @@ def expert_policy(robot, obs, stage):
 
     return path  # List of (B, 9)
 
+# === Setup Dataset ===
+agent_shape = (9,)
+action_shape = (9,)
+env_shape = (14,)
+dataset_path = Path("data/stack_cube")
+lerobot_dataset = LeRobotDataset.create(
+    repo_id=None,
+    root=dataset_path,
+    robot_type="franka",
+    fps=60,
+    use_videos=True,
+    features={
+        "observation.agent_pos": {"dtype": "float32", "shape": agent_shape}, 
+        "action": {"dtype": "float32", "shape": action_shape},
+        "observation.image": {"dtype": "video", "shape": (480, 640, 3)},
+    },
+)
 
+#### Example for state only data collection
+# === Run Episodes ===
+for ep in range(50):
+    print(f"\n🎬 Starting episode {ep+1}")
 
-obs, _ = env.reset()
-for stage in ["hover", "grasp", "lift", "place", "release"]:
-    print(f"==> Executing stage: {stage}")
-    action_path = expert_policy(env.get_robot(), obs, stage)
-    for action in action_path:  # each action is (B, 9)
-        obs, reward, done, _, _ = env.step(action)
+    # Reset environment (batched)
+    obs, _ = env.reset()
+    num_envs = obs["agent_pos"].shape[0]   # (B, 20) if batched
+
+    # Store all frames for this episode
+    all_agent_states, all_images, all_actions, all_rewards = [], [], [], []
+
+    for stage in ["hover", "grasp", "lift", "place", "release"]:
+        action_path = expert_policy(env.get_robot(), obs, stage)
+        for action in action_path:  # each action is (B, 9)
+            obs, reward, done, _, _ = env.step(action)
+            all_agent_states.append(obs["agent_pos"])              # (B, agent_dim)
+            all_images.append(obs["pixels"])       # (B, H, W, 3)
+            all_actions.append(action)             # (B, 9)
+            all_rewards.append(reward)
+
+    # Convert to arrays (T, B, ...)
+    agent_states_arr = np.stack(all_agent_states)      # (T, B, agent_dim)
+    images_arr = np.stack(all_images)      # (T, B, H, W, 3)
+    actions_arr = np.stack(all_actions)    # (T, B, 9)
+    rewards_arr = np.stack(all_rewards)    # (T, B)
+
+    # Save episodes where reward > 0 for each env in batch
+    for b in range(num_envs):
+        # If any reward > 0 in this env across time
+        if np.any(rewards_arr[:, b] > 0):
+            print(f"✅ Saving env {b} — reward > 0 observed")
+            for t in range(rewards_arr.shape[0]):
+                lerobot_dataset.add_frame({
+                    "observation.state": agent_states_arr[t, b].astype(np.float32),
+                    "observation.image": images_arr[t, b],
+                    "action": actions_arr[t, b].astype(np.float32),
+                    "task": "pick cube", #TODO: update
+                })
+            lerobot_dataset.save_episode()
+        else:
+            print(f"🚫 Skipping env {b} in episode — reward was always 0")
