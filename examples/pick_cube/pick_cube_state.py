@@ -62,7 +62,7 @@ lerobot_dataset = LeRobotDataset.create(
     fps=60,
     use_videos=True,
     features={
-        "observation.agent_pos": {"dtype": "float32", "shape": agent_shape}, 
+        "observation.state": {"dtype": "float32", "shape": agent_shape}, 
         "observation.environment_state": {"dtype": "float32", "shape": env_shape},
         "action": {"dtype": "float32", "shape": action_shape},
     },
