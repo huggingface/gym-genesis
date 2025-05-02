@@ -13,70 +13,69 @@ env = env.unwrapped
 
 def expert_policy(robot, obs, stage):
     """
-    Returns a list of (9,) actions.
+    Batched expert policy.
+    Returns a list of (B, 9) NumPy actions.
     """
+    B = obs["environment_state"].shape[0]
     eef = robot.get_link("hand")
     quat = np.array([0, 1, 0, 0], dtype=np.float32)
+    quat_batch = np.tile(quat, (B, 1))  # (B, 4)
 
-    cube1_pos = obs["environment_state"][:3]
-    cube2_pos = obs["environment_state"][11:14]
+    # Extract positions
+    cube1_pos = obs["environment_state"][:, :3]      # (B, 3)
+    cube2_pos = obs["environment_state"][:, 11:14]   # (B, 3)
 
+    # Gripper targets
     grip_open = 0.04
     grip_closed = -0.02
 
     if stage == "hover":
         target_pos = cube1_pos + np.array([0.0, 0.0, 0.25])
-        grip = grip_open
+        grip = np.full((B, 2), grip_open, dtype=np.float32)
 
     elif stage == "grasp":
         target_pos = cube1_pos + np.array([0.0, 0.0, 0.045])
-        grip = grip_closed  # we'll delay this below
+        grip = np.full((B, 2), grip_closed, dtype=np.float32)  # will be delayed below
 
     elif stage == "lift":
         target_pos = cube1_pos + np.array([0.0, 0.0, 0.28])
-        grip = grip_closed
+        grip = np.full((B, 2), grip_closed, dtype=np.float32)
 
     elif stage == "place":
         target_pos = cube2_pos + np.array([0.0, 0.0, 0.18])
-        grip = grip_closed
+        grip = np.full((B, 2), grip_closed, dtype=np.float32)
 
     elif stage == "release":
         target_pos = cube2_pos + np.array([0.0, 0.0, 0.18])
-        grip = grip_open
+        grip = np.full((B, 2), grip_open, dtype=np.float32)
 
     else:
         raise ValueError(f"Unknown stage: {stage}")
 
-    # === Inverse Kinematics ===
+    # === Batched IK ===
     q_goal = robot.inverse_kinematics(
         link=eef,
         pos=target_pos,
-        quat=quat,
-    )
+        quat=quat_batch,
+        envs_idx=np.arange(B)
+    )  # (B, 9)
 
-    # Set gripper in goal
-    q_goal[-2:] = grip
-
-    # === Plan full-body path ===
-    path = robot.plan_path(qpos_goal=q_goal, num_waypoints=40)
-
-    # === Delayed gripper closing during grasp ===
+    # === Gripper assignment ===
     if stage == "grasp":
-        for i in range(len(path) - 5):
-            path[i][-2:] = grip_open
-        for i in range(len(path) - 5, len(path)):
-            alpha = (i - (len(path) - 5)) / 5
+        # Add delayed closing (open first N-5 steps, close over last 5)
+        path = robot.plan_path(qpos_goal=q_goal, num_waypoints=40)  # list of (B, 9)
+        for i in range(35):
+            path[i][:, 7:] = grip_open
+        for i in range(35, 40):
+            alpha = (i - 35) / 5
             g = (1 - alpha) * grip_open + alpha * grip_closed
-            path[i][-2:] = g
-
-
+            path[i][:, 7:] = g
     else:
-        for i in range(len(path)):
-            path[i][-2:] = grip
-    
-    #TODO: (jadechoghari): add wield constraint ?
+        path = robot.plan_path(qpos_goal=q_goal, num_waypoints=40)  # list of (B, 9)
+        for i in range(40):
+            path[i][:, 7:] = grip
 
-    return path
+    return path  # list of (B, 9) actions
 
 
 
@@ -84,5 +83,5 @@ obs, _ = env.reset()
 for stage in ["hover", "grasp", "lift", "place", "release"]:
     print(f"==> Executing stage: {stage}")
     action_path = expert_policy(env.get_robot(), obs, stage)
-    for action in action_path:  # each action is (9,)
+    for action in action_path:  # each action is (B, 9)
         obs, reward, done, _, _ = env.step(action)
