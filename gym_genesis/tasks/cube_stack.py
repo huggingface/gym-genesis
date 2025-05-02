@@ -24,7 +24,7 @@ color_dict = {
     "yellow": (1.0, 1.0, 0.0, 1.0),
 }
 
-class CubeStackV2:
+class CubeStack:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode):
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
