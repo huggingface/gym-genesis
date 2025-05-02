@@ -43,7 +43,7 @@ class CubeStack:
         self.scene = gs.Scene(
             sim_options=gs.options.SimOptions(dt=0.01),
             rigid_options=gs.options.RigidOptions(box_box_detection=True),
-            show_viewer=True,
+            show_viewer=False,
         )
 
         self.plane = self.scene.add_entity(gs.morphs.Plane())
@@ -172,12 +172,13 @@ class CubeStack:
         self.action_space.seed(seed)
 
     def step(self, action):
-        self.franka.control_dofs_position(action[:7], self.motors_dof)
-        self.franka.control_dofs_position(action[7:], self.fingers_dof)
+        self.franka.control_dofs_position(action[:, :7], self.motors_dof)
+        self.franka.control_dofs_position(action[:, 7:], self.fingers_dof)
         self.scene.step()
         reward = self.compute_reward()
         obs = self.get_obs()
         return None, reward, None, obs
+
     
     def compute_reward(self):
         pos_1 = self.cube_1.get_pos()  # (B, 3)
@@ -187,7 +188,7 @@ class CubeStack:
         z_diff = pos_1[:, 2] - pos_2[:, 2]  # (B,)
 
         reward = ((xy_dist < 0.05) & (z_diff > 0.03)).float()  # (B,)
-        return reward
+        return reward.cpu()
     
     def get_obs(self):
         eef_pos = self.eef.get_pos().cpu().numpy()          # (B, 3)
@@ -213,7 +214,7 @@ class CubeStack:
 
         if self.enable_pixels:
             #TODO (jadechoghari): it's hacky but keep it for the sake of saving time
-            del obs["environment_state"]
+            # del obs["environment_state"]
             if self.camera_capture_mode == "per_env":
                 # Capture a separate image for each environment
                 batch_imgs = []
