@@ -64,54 +64,10 @@ lerobot_dataset = LeRobotDataset.create(
     use_videos=True,
     features={
         "observation.agent_pos": {"dtype": "float32", "shape": agent_shape}, 
-        "observation.environment_state": {"dtype": "float32", "shape": env_shape}, # comment this to hide env info from policy
+        "observation.environment_state": {"dtype": "float32", "shape": env_shape},
         "action": {"dtype": "float32", "shape": action_shape},
-        "observation.image": {"dtype": "video", "shape": (480, 640, 3)}, # comment for state-only training
     },
 )
-
-# === Run Episodes ===
-for ep in range(50):
-    print(f"\n🎬 Starting episode {ep+1}")
-
-    # Reset environment (batched)
-    obs, _ = env.reset()
-    num_envs = obs["agent_pos"].shape[0]   # (B, 20) if batched
-
-    # Store all frames for this episode
-    all_agent_states, all_images, all_actions, all_rewards = [], [], [], [], []
-
-    for stage in ["hover", "stabilize", "grasp", "grasp", "lift"]:
-        for t in trange(40, leave=False):
-            action = expert_policy(env.get_robot(), obs, stage)         # (B, 9)
-            obs, reward, done, _, info = env.step(action)  # obs: dict of batched arrays
-            all_agent_states.append(obs["agent_pos"])              # (B, agent_dim)
-            all_images.append(obs["pixels"])       # (B, H, W, 3)
-            all_actions.append(action)             # (B, 9)
-            all_rewards.append(reward)             # (B,)
-
-    # Convert to arrays (T, B, ...)
-    #FIXME: system ram crash if B is too big
-    agent_states_arr = np.stack(all_agent_states)      # (T, B, agent_dim)
-    actions_arr = np.stack(all_actions)    # (T, B, 9)
-    images_arr = np.stack(all_images)      # (T, B, H, W, 3)
-    rewards_arr = np.stack(all_rewards)    # (T, B)
-
-    # Save episodes where reward > 0 for each env in batch
-    for b in range(num_envs):
-        # If any reward > 0 in this env across time
-        if np.any(rewards_arr[:, b] > 0):
-            print(f"✅ Saving env {b} — reward > 0 observed")
-            for t in range(rewards_arr.shape[0]):
-                lerobot_dataset.add_frame({
-                    "observation.state": agent_states_arr[t, b].astype(np.float32),
-                    "action": actions_arr[t, b].astype(np.float32),
-                    "observation.image": images_arr[t, b],
-                    "task": "pick cube",
-                })
-            lerobot_dataset.save_episode()
-        else:
-            print(f"🚫 Skipping env {b} in episode — reward was always 0")
 
 #### Example for state only data collection
 # === Run Episodes ===
