@@ -160,7 +160,8 @@ for ep in range(50):
                     "observation.state": agent_states_arr[t, b].astype(np.float32),
                     "observation.image": images_arr[t, b],
                     "action": actions_arr[t, b].astype(np.float32),
-                    "task": "pick cube", #TODO: update
+                    #TODO: update this when adding randmoization of colors
+                    "task": "pick up the red cube and place it on top of the green cube",
                 })
             lerobot_dataset.save_episode()
         else:
