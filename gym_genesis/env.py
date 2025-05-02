@@ -53,7 +53,7 @@ class GenesisEnv(gym.Env):
         terminated = np.array(is_success, dtype=bool)
         truncated = np.zeros(self.num_envs, dtype=bool)  # All False
 
-        info = {"is_success": is_success} # TODO: put back .tolist()
+        info = {"is_success": is_success.tolist()}
 
         return observation, reward, terminated, truncated, info
     
