@@ -119,7 +119,7 @@ lerobot_dataset = LeRobotDataset.create(
     features={
         "observation.state": {"dtype": "float32", "shape": agent_shape}, 
         "action": {"dtype": "float32", "shape": action_shape},
-        "observation.image": {"dtype": "video", "shape": (480, 640, 3)},
+        "observation.environment_state": {"dtype": "float32", "shape": env_shape},
     },
 )
 

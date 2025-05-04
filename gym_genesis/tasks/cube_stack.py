@@ -214,7 +214,7 @@ class CubeStack:
 
         if self.enable_pixels:
             #TODO (jadechoghari): it's hacky but keep it for the sake of saving time
-            # del obs["environment_state"]
+            del obs["environment_state"]
             if self.camera_capture_mode == "per_env":
                 # Capture a separate image for each environment
                 batch_imgs = []
