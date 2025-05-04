@@ -189,7 +189,7 @@ class CubeStack:
         z_diff = pos_1[:, 2] - pos_2[:, 2]  # (B,)
 
         reward = ((xy_dist < 0.05) & (z_diff > 0.03)).float()  # (B,)
-        return reward.cpu()
+        return reward.cpu().numpy()
     
     def get_obs(self):
         eef_pos = self.eef.get_pos()          # (B, 3)
