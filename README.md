@@ -28,7 +28,7 @@ env = gym.make("gym_genesis/CubePick-v0", enable_pixels=True, num_envs=10)
 obs, info = env.reset()
 frames = []
 
-for _ in range(50):
+for _ in range(1000):
     # sample a batch of actions
     actions = np.stack([env.action_space.sample() for _ in range(env.num_envs)])
     obs, reward, terminated, truncated, info = env.step(actions)
