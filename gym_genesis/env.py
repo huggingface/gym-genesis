@@ -83,7 +83,7 @@ class GenesisEnv(gym.Env):
         return self._env.cam.render()[0] if self.enable_pixels else None
     
     def _make_env_task(self, task_name):
-        if task_name == "cube":
+        if task_name == "cube_pick":
             task = CubePick(enable_pixels=self.enable_pixels,
                             observation_height=self.observation_height, 
                             observation_width=self.observation_width,

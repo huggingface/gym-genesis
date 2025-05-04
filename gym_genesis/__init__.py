@@ -6,7 +6,7 @@ register(
     max_episode_steps=200,
     nondeterministic=False,
     kwargs={
-        "task": "cube",
+        "task": "cube_pick",
         "enable_pixels": False,
         "num_envs": 10,
         "observation_height": 480,
