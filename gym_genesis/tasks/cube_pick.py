@@ -18,7 +18,7 @@ joints_name = (
 AGENT_DIM = len(joints_name)
 ENV_DIM = 11
 
-class CubeTask:
+class CubePick:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode, strip_environment_state):
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
@@ -134,23 +134,23 @@ class CubeTask:
     def get_obs(self):
         # (B, X)
         # === agent (robot) state features ===
-        eef_pos = self.eef.get_pos().cpu().numpy() # (B, 3)
-        eef_rot = self.eef.get_quat().cpu().numpy() # (B, 4)
-        gripper = self.franka.get_dofs_position()[..., 7:9].cpu().numpy() # (B, 2)
+        eef_pos = self.eef.get_pos() # (B, 3)
+        eef_rot = self.eef.get_quat() # (B, 4)
+        gripper = self.franka.get_dofs_position()[..., 7:9] # (B, 2)
 
         # === environment (object) state features ===
-        cube_pos = self.cube.get_pos().cpu().numpy() # (B, 3)
-        cube_rot = self.cube.get_quat().cpu().numpy() # (B, 4)
+        cube_pos = self.cube.get_pos() # (B, 3)
+        cube_rot = self.cube.get_quat() # (B, 4)
         diff = eef_pos - cube_pos # (B, 3) (privileged)
-        dist = np.linalg.norm(diff, axis=1, keepdims=True) # (B, 1) (privileged)
+        dist = torch.norm(diff, dim=1, keepdim=True) # (B, 1) (privileged)
 
         # compose observation dicts
-        agent_pos = np.concatenate([eef_pos, eef_rot, gripper], axis=1)         # (B, 9)
-        environment_state = np.concatenate([cube_pos, cube_rot, diff, dist], axis=1)  # (B, 11)
+        agent_pos = torch.cat([eef_pos, eef_rot, gripper], dim=1).float()        # (B, 9)
+        environment_state = torch.cat([cube_pos, cube_rot, diff, dist], dim=1).float()  # (B, 11)
 
         obs = {
-            "agent_pos": agent_pos.astype(np.float32),                  # (B, 9)
-            "environment_state": environment_state.astype(np.float32),  # (B, 11)
+            "agent_pos": agent_pos,                  # (B, 9)
+            "environment_state": environment_state,  # (B, 11)
         }
 
         if self.enable_pixels:

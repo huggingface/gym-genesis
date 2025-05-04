@@ -2,6 +2,7 @@ import numpy as np
 from tqdm import trange
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from pathlib import Path
+import torch
 import gym_genesis
 import gymnasium as gym
 
@@ -16,40 +17,41 @@ env = env.unwrapped
 def expert_policy(robot, observation, stage):
     """
     Batched expert policy for all environments in parallel.
-    Returns actions of shape (B, 9).
+    Returns actions of shape (B, 9) on GPU.
     """
-    agent_pos = observation["agent_pos"]
-    environment_state = observation["environment_state"]
+    agent_pos = observation["agent_pos"]             # torch.Tensor (B, 9)
+    environment_state = observation["environment_state"]  # torch.Tensor (B, 14)
     B = agent_pos.shape[0]
-    cube_pos = environment_state[:, :3]
+    device = agent_pos.device
+
+    cube_pos = environment_state[:, :3]              # (B, 3)
     finder_pos = -0.02
-    quat = np.array([0, 1, 0, 0], dtype=np.float32)     # (4,)
-    quat_batch = np.tile(quat, (B, 1))                  # (B, 4)
+
+    quat = torch.tensor([0, 1, 0, 0], dtype=torch.float32, device=device).expand(B, -1)  # (B, 4)
     eef = robot.get_link("hand")
-    # state logic
-    if stage == "hover":
-        target_pos = cube_pos + np.array([0.0, 0.0, 0.115])
-        grip = np.tile([0.04, 0.04], (B, 1))
-    elif stage == "stabilize":
-        target_pos = cube_pos + np.array([0.0, 0.0, 0.115])
-        grip = np.tile([0.04, 0.04], (B, 1))
+
+    # === Stage-dependent targets ===
+    if stage in ["hover", "stabilize"]:
+        target_pos = cube_pos + torch.tensor([0.0, 0.0, 0.115], device=device)
+        grip = torch.full((B, 2), 0.04, device=device)
     elif stage == "grasp":
-        target_pos = cube_pos + np.array([0.0, 0.0, 0.03])
-        grip = np.tile([finder_pos, finder_pos], (B, 1))
+        target_pos = cube_pos + torch.tensor([0.0, 0.0, 0.03], device=device)
+        grip = torch.full((B, 2), finder_pos, device=device)
     elif stage == "lift":
-        target_pos = cube_pos + np.array([0.0, 0.0, 0.25])
-        grip = np.tile([finder_pos, finder_pos], (B, 1))
+        target_pos = cube_pos + torch.tensor([0.0, 0.0, 0.25], device=device)
+        grip = torch.full((B, 2), finder_pos, device=device)
     else:
         raise ValueError(f"Unknown stage: {stage}")
-    # --- batched inverse kinematics! ---
+
+    # === Batched IK ===
     qpos = robot.inverse_kinematics(
         link=eef,
         pos=target_pos,       # (B, 3)
-        quat=quat_batch,            # (B, 4)
-        envs_idx=np.arange(B) # might be auto if pos is batched
-    ).cpu().numpy()           # (B, 9)
+        quat=quat,            # (B, 4)
+        envs_idx=torch.arange(B, device=device)
+    )  # (B, 9), still on GPU
 
-    action = np.concatenate([qpos[:, :-2], grip], axis=1)   # (B, 9)
+    action = torch.cat([qpos[:, :-2], grip], dim=1)  # (B, 9), still on GPU
     return action
 
 # === Setup Dataset ===
@@ -85,9 +87,9 @@ for ep in range(50):
         for t in trange(40, leave=False):
             action = expert_policy(env.get_robot(), obs, stage)         # (B, 9)
             obs, reward, done, _, info = env.step(action)  # obs: dict of batched arrays
-            all_agent_states.append(obs["agent_pos"])              # (B, agent_dim)
+            all_agent_states.append(obs["agent_pos"].detach().cpu().numpy())              # (B, agent_dim)
             all_images.append(obs["pixels"])       # (B, H, W, 3)
-            all_actions.append(action)             # (B, 9)
+            all_actions.append(action.detach().cpu().numpy())             # (B, 9)
             all_rewards.append(reward)             # (B,)
 
     # Convert to arrays (T, B, ...)

@@ -192,21 +192,19 @@ class CubeStack:
         return reward.cpu()
     
     def get_obs(self):
-        eef_pos = self.eef.get_pos().cpu().numpy()          # (B, 3)
-        eef_rot = self.eef.get_quat().cpu().numpy()         # (B, 4)
-        gripper = self.franka.get_dofs_position().cpu().numpy()[:, 7:9]  # (B, 2)
+        eef_pos = self.eef.get_pos()          # (B, 3)
+        eef_rot = self.eef.get_quat()         # (B, 4)
+        gripper = self.franka.get_dofs_position()[:, 7:9]  # (B, 2)
 
-        cube1_pos = self.cube_1.get_pos().cpu().numpy()     # (B, 3)
-        cube1_rot = self.cube_1.get_quat().cpu().numpy()    # (B, 4)
-        cube2_pos = self.cube_2.get_pos().cpu().numpy()     # (B, 3)
+        cube1_pos = self.cube_1.get_pos()     # (B, 3)
+        cube1_rot = self.cube_1.get_quat()    # (B, 4)
+        cube2_pos = self.cube_2.get_pos()    # (B, 3)
 
         diff = eef_pos - cube1_pos                          # (B, 3)
-        dist = np.linalg.norm(diff, axis=1, keepdims=True)  # (B, 1)
+        dist = torch.norm(diff, dim=1, keepdim=True) # (B, 1) (privileged)
 
-        agent_pos = np.concatenate([eef_pos, eef_rot, gripper], axis=1).astype(np.float32)  # (B, 9)
-        environment_state = np.concatenate(
-            [cube1_pos, cube1_rot, diff, dist, cube2_pos], axis=1
-        ).astype(np.float32)  # (B, 14)
+        agent_pos = torch.cat([eef_pos, eef_rot, gripper], dim=1).float()  # (B, 9)
+        environment_state = torch.cat([cube1_pos, cube1_rot, diff, dist, cube2_pos], dim=1).float()  # (B, 14)
 
         obs = {
             "agent_pos": agent_pos,

@@ -3,7 +3,7 @@ import genesis as gs
 import numpy as np
 from gymnasium import spaces
 import warnings
-from gym_genesis.tasks.cube_pick import CubeTask
+from gym_genesis.tasks.cube_pick import CubePick
 from gym_genesis.tasks.cube_stack import CubeStack
 class GenesisEnv(gym.Env):
 
@@ -84,7 +84,7 @@ class GenesisEnv(gym.Env):
     
     def _make_env_task(self, task_name):
         if task_name == "cube":
-            task = CubeTask(enable_pixels=self.enable_pixels,
+            task = CubePick(enable_pixels=self.enable_pixels,
                             observation_height=self.observation_height, 
                             observation_width=self.observation_width,
                             num_envs = self.num_envs,
