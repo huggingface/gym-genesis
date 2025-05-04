@@ -10,6 +10,7 @@ env = gym.make(
     "gym_genesis/CubeStack-v0",
     enable_pixels=True,
     camera_capture_mode="per_env",
+    strip_environment_state=False,
     num_envs=3
 )
 env = env.unwrapped

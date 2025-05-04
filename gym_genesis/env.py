@@ -18,7 +18,8 @@ class GenesisEnv(gym.Env):
             num_envs = 1,
             env_spacing = (1.0, 1.0),
             render_mode=None,
-            camera_capture_mode="per_env" # or "global",
+            camera_capture_mode="per_env", # or "global"
+            strip_environment_state = True,
     ):
         super().__init__()
         self.task = task
@@ -29,6 +30,7 @@ class GenesisEnv(gym.Env):
         self.env_spacing = env_spacing
         self.render_mode = render_mode
         self.camera_capture_mode = camera_capture_mode
+        self.strip_environment_state = strip_environment_state
         self._env = self._make_env_task(self.task)
         self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
@@ -88,6 +90,7 @@ class GenesisEnv(gym.Env):
                             num_envs = self.num_envs,
                             env_spacing = self.env_spacing,
                             camera_capture_mode = self.camera_capture_mode,
+                            strip_environment_state=self.strip_environment_state,
                             )
         elif task_name == "cube_stack":
             task = CubeStack(enable_pixels=self.enable_pixels,
@@ -96,6 +99,7 @@ class GenesisEnv(gym.Env):
                             num_envs = self.num_envs,
                             env_spacing = self.env_spacing,
                             camera_capture_mode = self.camera_capture_mode,
+                            strip_environment_state=self.strip_environment_state,
                             )
         else:
             raise NotImplementedError(task_name)

@@ -13,6 +13,7 @@ register(
         "observation_width": 640,
         "env_spacing": (1.0, 1.0),
         "camera_capture_mode": "global",
+        "strip_environment_state": True,
     },
 )
 
@@ -29,5 +30,6 @@ register(
         "observation_width": 640,
         "env_spacing": (1.0, 1.0),
         "camera_capture_mode": "global",
+        "strip_environment_state": True,
     },
 )

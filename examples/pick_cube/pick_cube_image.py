@@ -9,6 +9,7 @@ env = gym.make(
     "gym_genesis/CubePick-v0",
     enable_pixels=True,
     camera_capture_mode="per_env",
+    strip_environment_state=False
 )
 env = env.unwrapped
 

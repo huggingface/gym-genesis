@@ -19,7 +19,7 @@ AGENT_DIM = len(joints_name)
 ENV_DIM = 11
 
 class CubeTask:
-    def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode):
+    def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode, strip_environment_state):
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
         self.observation_width = observation_width
@@ -29,6 +29,7 @@ class CubeTask:
         self.observation_space = self._make_obs_space()
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(AGENT_DIM,), dtype=np.float32)
         self.camera_capture_mode = camera_capture_mode
+        self.strip_environment_state=strip_environment_state
 
     def _build_scene(self, num_envs, env_spacing):
         if not gs._initialized:
@@ -154,7 +155,8 @@ class CubeTask:
 
         if self.enable_pixels:
             #TODO (jadechoghari): it's hacky but keep it for the sake of saving time
-            del obs["environment_state"]
+            if self.strip_environment_state is True:
+                del obs["environment_state"]
             if self.camera_capture_mode == "per_env":
                 # Capture a separate image for each environment
                 batch_imgs = []
