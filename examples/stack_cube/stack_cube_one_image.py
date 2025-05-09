@@ -6,6 +6,7 @@ import torch
 import genesis as gs
 import gym_genesis
 import gymnasium as gym
+GRASP_OFFSET = 0.01
 env = gym.make(
     "gym_genesis/CubeStack-v0",
     enable_pixels=True,
@@ -14,67 +15,74 @@ env = gym.make(
     num_envs=3
 )
 env = env.unwrapped
-def expert_policy_1(robot, obs, stage):
-    """
-    Returns a list of (9,) torch tensors on the same device (e.g., mps:0).
-    """
-    device = obs["environment_state"].device
-    eef = robot.get_link("hand")
-    quat = torch.tensor([0, 1, 0, 0], dtype=torch.float32, device=device)
+# def expert_policy(robot, obs, stage):
+#     """
+#     Returns a list of (9,) torch tensors on the same device (e.g., mps:0).
+#     """
+#     device = obs["environment_state"].device
+#     eef = robot.get_link("hand")
+#     quat = torch.tensor([0, 1, 0, 0], dtype=torch.float32, device=device)
 
-    cube1_pos = obs["environment_state"][:3]        # (3,)
-    cube2_pos = obs["environment_state"][11:14]     # (3,)
-    grip_open = 0.04
-    grip_closed = -0.02
+#     cube1_pos = obs["environment_state"][:3]        # (3,)
+#     cube2_pos = obs["environment_state"][11:14]     # (3,)
+#     grip_open = 0.04
+#     grip_closed = -0.02
 
-    if stage == "hover":
-        target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.25], device=device)
-        grip = grip_open
+#     if stage == "hover":
+#         target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.25], device=device)
+#         grip = grip_open
 
-    elif stage == "grasp":
-        target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.045], device=device)
-        grip = grip_closed  # will interpolate later
+#     elif stage == "grasp":
+#         print("GRASP///////")
+#         # target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.045], device=device)
+#         target_z = max(0.7000312834978104 + 0.001, cube1_pos[2] - 0.03)
+#         target_pos = cube1_pos.clone()
+#         # target_pos[2] = 0.7000312834978104
 
-    elif stage == "lift":
-        target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.28], device=device)
-        grip = grip_closed
+#         grip = grip_closed  # will interpolate later
 
-    elif stage == "place":
-        target_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.18], device=device)
-        grip = grip_closed
+#     elif stage == "lift":
+#         target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.28], device=device)
+#         grip = grip_closed
 
-    elif stage == "release":
-        target_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.18], device=device)
-        grip = grip_open
+#     elif stage == "place":
+#         target_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.18], device=device)
+#         grip = grip_closed
 
-    else:
-        raise ValueError(f"Unknown stage: {stage}")
+#     elif stage == "release":
+#         target_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.18], device=device)
+#         grip = grip_open
 
-    # === Inverse Kinematics ===
-    q_goal = robot.inverse_kinematics(
-        link=eef,
-        pos=target_pos,
-        quat=quat,
-    )  # (9,) on device
+#     else:
+#         raise ValueError(f"Unknown stage: {stage}")
 
-    q_goal[-2:] = grip
+#     # === Inverse Kinematics ===
+#     q_goal = robot.inverse_kinematics(
+#         link=eef,
+#         pos=target_pos,
+#         quat=quat,
+#     )  # (9,) on device
 
-    # === Plan full-body path ===
-    path = robot.plan_path(qpos_goal=q_goal, num_waypoints=40)
+#     q_goal[-2:] = grip
 
-    # === Delayed gripper closing during grasp ===
-    if stage == "grasp":
-        for i in range(len(path) - 5):
-            path[i][-2:] = torch.tensor([grip_open, grip_open], device=device)
-        for i in range(len(path) - 5, len(path)):
-            alpha = (i - (len(path) - 5)) / 5
-            g = (1 - alpha) * grip_open + alpha * grip_closed
-            path[i][-2:] = torch.tensor([g, g], device=device)
-    else:
-        grip_tensor = torch.tensor([grip, grip], device=device)
-        for i in range(len(path)):
-            path[i][-2:] = grip_tensor
-    return path  # List of (9,) torch tensors on GPU
+#     # === Plan full-body path ===
+#     path = robot.plan_path(qpos_goal=q_goal, num_waypoints=100)
+
+#     # === Delayed gripper closing during grasp ===
+#     if stage == "grasp":
+#         for i in range(len(path) - 5):
+#             path[i][-2:] = grip_open
+#         for i in range(len(path) - 5, len(path)):
+#             alpha = (i - (len(path) - 5)) / 5
+#             g = (1 - alpha) * grip_open + alpha * grip_closed
+#             path[i][-2:] = g
+
+
+#     else:
+#         for i in range(len(path)):
+#             path[i][-2:] = grip
+#     print(f"[DEBUG] cube1_pos={cube1_pos.cpu().numpy()}, 0.7000312834978104")
+#     return path  # List of (9,) torch tensors on GPU
 
 def expert_policy(robot, obs, stage):
     """
@@ -96,7 +104,7 @@ def expert_policy(robot, obs, stage):
         grip_val = grip_open
     elif stage == "grasp":
         # target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.045], device=gs.device)
-        target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.01], device=gs.device)
+        target_pos = cube1_pos + torch.tensor([0.0, 0.0, GRASP_OFFSET], device=gs.device)
         grip_val = grip_closed
     elif stage == "lift":
         target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.28], device=gs.device)
@@ -156,6 +164,9 @@ def expert_policy(robot, obs, stage):
         grip_tensor = torch.tensor([grip_val, grip_val], device=path[0].device)
         for i in range(len(path)):
             path[i][-2:] = grip_tensor
+    print(f"[{stage}] Cube pos: {cube1_pos.cpu().numpy()}, EEF pos: {current_pos.cpu().numpy()}")
+    print("Target waypoint:", wp.cpu().numpy())
+    print("IK q:", q.cpu().numpy())
 
     return path  # List of (9,) torch tensors
 
@@ -193,18 +204,18 @@ for ep in range(10):
         action_path = expert_policy(env.get_robot(), obs, stage)
         for action in action_path:  # each action is (B, 9)
             obs, reward, done, _, _ = env.step(action)
-            all_agent_states.append(obs["agent_pos"].detach().cpu().numpy()) # (B, agent_dim)
-            all_images.append(obs["pixels"])       # (B, H, W, 3)
-            all_actions.append(action.detach().cpu().numpy())             # (B, 9)
-            all_rewards.append(reward)
+            # all_agent_states.append(obs["agent_pos"].detach().cpu().numpy()) # (B, agent_dim)
+            # all_images.append(obs["pixels"])       # (B, H, W, 3)
+            # all_actions.append(action.detach().cpu().numpy())             # (B, 9)
+            # all_rewards.append(reward)
 
-    # Convert to arrays (T, B, ...)
-    agent_states_arr = np.stack(all_agent_states) # (T, B, agent_dim)
-    images_arr = np.stack(all_images)      # (T, B, H, W, 3)
-    actions_arr = np.stack(all_actions)    # (T, B, 9)
-    rewards_arr = np.stack(all_rewards)    # (T, B)
-    if np.any(rewards_arr > 0):
-            print(f"✅ Saving env {b} — reward > 0 observed")
+    # # Convert to arrays (T, B, ...)
+    # agent_states_arr = np.stack(all_agent_states) # (T, B, agent_dim)
+    # images_arr = np.stack(all_images)      # (T, B, H, W, 3)
+    # actions_arr = np.stack(all_actions)    # (T, B, 9)
+    # rewards_arr = np.stack(all_rewards)    # (T, B)
+    # if np.any(rewards_arr > 0):
+    #         print(f"✅ Saving env {b} — reward > 0 observed")
 
     # # Save episodes where reward > 0 for each env in batch
     # for b in range(num_envs):
