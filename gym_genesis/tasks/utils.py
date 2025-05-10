@@ -340,7 +340,36 @@ def build_house(self, num_envs, env_spacing):
     # add_wall(self.scene, 3, 3, 0, 6, texture=dining_room_wall_path, id=7, remove_region=[0.9,1.4,2.0,2.6])
     # add_wall(self.scene, 0, 3, 6, 6, texture=dining_room_wall_path, id=18, remove_region=[1.8,0,2.7,2])
 
-    self.cam = self.scene.add_camera(pos=(-2, -2, 1.5), lookat=(-0.8, 0.0, 0.8), res=(1920, 1080), fov=60, GUI=False, spp=2048)
+    # self.cam = self.scene.add_camera(pos=(-2, -2, 1.5), lookat=(-0.8, 0.0, 0.8), res=(1920, 1080), fov=60, GUI=False, spp=2048)
+    if self.enable_pixels:
+        # === Top camera (overhead) ===
+        self.cam_top = self.scene.add_camera(
+            res=(self.observation_width, self.observation_height),
+            pos=(0.0, 0.0, 1.5),
+            lookat=(0.0, 0.0, 0.0),
+            fov=40,
+            GUI=False,
+        )
+
+        # === Side camera (side view) ===
+        self.cam_side = self.scene.add_camera(
+            res=(self.observation_width, self.observation_height),
+            pos=(1.0, 0.0, 0.5),
+            lookat=(0.0, 0.0, 0.5),
+            fov=40,
+            GUI=False,
+        )
+
+        # === Wrist camera (attached to robot link, e.g., hand or wrist) ===
+        self.cam_wrist = self.scene.add_camera(
+            res=(640, 480),
+            pos=(0.4, 0.0, 0.7), # mimic wrist pos?
+            lookat=(0, 0, 1),
+            fov=90,
+            GUI=False,
+        )
+
+
     # cam = None
 
     # self.scene.add_entity(

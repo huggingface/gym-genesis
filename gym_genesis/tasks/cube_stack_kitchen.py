@@ -162,24 +162,59 @@ class CubeStackKitchen:
 
         if self.enable_pixels:
             #TODO (jadechoghari): it's hacky but keep it for the sake of saving time
-            if self.strip_environment_state is True:
+            if self.strip_environment_state:
                 del obs["environment_state"]
+
             if self.camera_capture_mode == "per_env":
-                # Capture a separate image for each environment
-                batch_imgs = []
+                # capture 3 views per environment
+                top_imgs, wrist_imgs, side_imgs = [], [], []
+
                 for i in range(self.num_envs):
-                    pos_i = self.scene.envs_offset[i] + np.array([3.5, 0.0, 2.5])
-                    lookat_i = self.scene.envs_offset[i] + np.array([0, 0, 0.5])
-                    self.cam.set_pose(pos=pos_i, lookat=lookat_i)
-                    img = self.cam.render()[0]
-                    batch_imgs.append(img)
-                pixels = np.stack(batch_imgs, axis=0)  # shape: (B, H, W, 3)
-                assert pixels.ndim == 4, f"pixels shape {pixels.shape} is not 4D (B, H, W, 3)"
+                    offset = self.scene.envs_offset[i]
+
+                    # --- top camera ---
+                    self.cam_top.set_pose(pos=offset + np.array([0.0, 0.0, 2.0]), lookat=offset + np.array([0.0, 0.0, 0.5]))
+                    top_img = self.cam_top.render()[0]
+                    top_imgs.append(top_img)
+
+                    # --- side camera ---
+                    self.cam_side.set_pose(pos=offset + np.array([1.5, 0.0, 0.8]), lookat=offset + np.array([0.0, 0.0, 0.5]))
+                    side_img = self.cam_side.render()[0]
+                    side_imgs.append(side_img)
+
+                    # --- wrist camera ---
+                    wrist_link = self.franka.get_link("hand")
+                    wrist_pos = wrist_link.get_pos(envs_idx=i)
+                    wrist_quat = wrist_link.get_quat(envs_idx=i)
+                    forward = gs.utils.quat_to_matrix(wrist_quat)[i, :, 2]
+                    lookat = wrist_pos + forward * 0.1
+                    self.cam_wrist.set_pose(pos=wrist_pos, lookat=lookat)
+                    wrist_img = self.cam_wrist.render()[0]
+                    wrist_imgs.append(wrist_img)
+
+                pixels = {
+                    "top": np.stack(top_imgs),
+                    "side": np.stack(side_imgs),
+                    "wrist": np.stack(wrist_imgs),
+                }
+
+                for name, img in pixels.items():
+                    assert img.ndim == 4, f"{name} pixels shape {img.shape} is not 4D (B, H, W, 3)"
+
+                obs["pixels"] = pixels
+
             elif self.camera_capture_mode == "global":
-                # Capture a single global/overview image
-                pixels = self.cam.render()[0]  # shape: (H, W, 3)
-                assert pixels.ndim == 3, f"pixels shape {pixels.shape} is not 3D (H, W, 3)"
+                pixels = {
+                    "top": self.cam_top.render()[0],
+                    "side": self.cam_side.render()[0],
+                    "wrist": self.cam_wrist.render()[0],
+                }
+
+                for name, img in pixels.items():
+                    assert img.ndim == 3, f"{name} pixels shape {img.shape} is not 3D (H, W, 3)"
+
+                obs["pixels"] = pixels
+
             else:
                 raise ValueError(f"Unknown camera_capture_mode: {self.camera_capture_mode}")
-            obs["pixels"] = pixels
         return obs
