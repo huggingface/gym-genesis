@@ -6,6 +6,7 @@ import warnings
 from gym_genesis.tasks.cube_pick import CubePick
 from gym_genesis.tasks.cube_stack import CubeStack
 from gym_genesis.tasks.cube_stack_one import CubeStackOne
+from gym_genesis.tasks.cube_stack_kitchen import CubeStackKitchen
 class GenesisEnv(gym.Env):
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
@@ -94,7 +95,7 @@ class GenesisEnv(gym.Env):
                             strip_environment_state=self.strip_environment_state,
                             )
         elif task_name == "cube_stack":
-            task = CubeStackOne(enable_pixels=self.enable_pixels,
+            task = CubeStackKitchen(enable_pixels=self.enable_pixels,
                             observation_height=self.observation_height, 
                             observation_width=self.observation_width,
                             num_envs = self.num_envs,

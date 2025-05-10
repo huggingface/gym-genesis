@@ -236,7 +236,7 @@ def add_floor(scene, x_l, x_r, y_l, y_r, texture="", id=0):
 import cv2
 
 
-def build_house(self):
+def build_house(self, num_envs, env_spacing):
     import imageio
     import json
 
@@ -403,7 +403,6 @@ def build_house(self):
     # Since the island was rotated (90, 0, 0), mesh Y becomes world Z
     island_top_z = -0.2003899186849594116 + top_z  # island base z + mesh top
     self.island_top_z = island_top_z
-    print("ISLAND", island_top_z)
 
     # === Main task cubes on the island ===
     self.cube_1 = self.scene.add_entity(
@@ -440,7 +439,7 @@ def build_house(self):
         self.distractor_cubes.append(cube)
 
 
-    self.scene.build()
+    self.scene.build(n_envs=num_envs, env_spacing=env_spacing)
 
     # from IPython import embed
 
