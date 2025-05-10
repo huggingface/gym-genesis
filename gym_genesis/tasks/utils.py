@@ -384,9 +384,15 @@ def build_house(self):
     # )
 
     self.franka = self.scene.add_entity(
-            gs.morphs.MJCF(file="xml/franka_emika_panda/panda.xml", pos=(-0.5, 0, 0.7)),
-            vis_mode="collision",
-        )
+        material=gs.materials.Rigid(),
+        morph=gs.morphs.URDF(
+            file="/Users/jade/Development/gym-genesis/SO-ARM100/URDF/SO_5DOF_ARM100_05d.SLDASM/urdf/SO_5DOF_ARM100_05d.SLDASM.urdf",
+            collision=True,
+            pos=(-0.5, 0, 0.7),
+            scale=1.0,
+        ),
+        vis_mode="collision"
+    )
 
     # Load kitchen island mesh to compute top surface Z
     island_uid = "45a68868-0c41-45d4-98c5-7721fc6c1445"
