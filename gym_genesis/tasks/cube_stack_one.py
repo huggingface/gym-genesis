@@ -105,7 +105,9 @@ class CubeStackOne:
         self.scene.step()
 
         if self.enable_pixels:
-            self.cam.start_recording()
+            self.cam_top.start_recording()
+            self.cam_side.start_recording()
+            self.cam_wrist.start_recording()
 
         return self.get_obs()
         
@@ -160,18 +162,37 @@ class CubeStackOne:
         if self.enable_pixels:
             if self.strip_environment_state:
                 del obs["environment_state"]
+            # --- top camera ---
+            self.cam_top.set_pose(
+                pos=np.array([0.0, 0.0, 2.0]),
+                lookat=np.array([0.0, 0.0, 0.5])
+            )
+            top_img = self.cam_top.render()[0]
 
-            if self.camera_capture_mode == "per_env":
-                pos_i = self.scene.envs_offset[0] + np.array([3.5, 0.0, 2.5])
-                lookat_i = self.scene.envs_offset[0] + np.array([0, 0, 0.5])
-                self.cam.set_pose(pos=pos_i, lookat=lookat_i)
-                pixels = self.cam.render()[0]  # (H, W, 3)
-                assert pixels.ndim == 3, f"pixels shape {pixels.shape} is not 3D"
-            elif self.camera_capture_mode == "global":
-                pixels = self.cam.render()[0]  # (H, W, 3)
-                assert pixels.ndim == 3, f"pixels shape {pixels.shape} is not 3D"
-            else:
-                raise ValueError(f"Unknown camera_capture_mode: {self.camera_capture_mode}")
+            # --- side camera ---
+            self.cam_side.set_pose(
+                pos=np.array([1.5, 0.0, 0.8]),
+                lookat=np.array([0.0, 0.0, 0.5])
+            )
+            side_img = self.cam_side.render()[0]
+
+            wrist_link = self.franka.get_link("hand")
+            wrist_pos = wrist_link.get_pos()  # (3,) tensor on device
+            lookat = wrist_pos + torch.tensor([0.1, 0.0, 0.0], device=wrist_pos.device)
+
+            self.cam_wrist.set_pose(
+                pos=wrist_pos.cpu().numpy(),
+                lookat=lookat.cpu().numpy(),
+            )
+
+            wrist_img = self.cam_wrist.render()[0]
+            pixels = {
+                "top": top_img,
+                "side": side_img,
+                "wrist": wrist_img,
+            }
+
+            for name, img in pixels.items():
+                assert img.ndim == 3, f"{name} pixels shape {img.shape} is not 3D (H, W, 3)"
             obs["pixels"] = pixels
-
         return obs

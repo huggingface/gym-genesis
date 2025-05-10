@@ -236,7 +236,7 @@ def add_floor(scene, x_l, x_r, y_l, y_r, texture="", id=0):
 import cv2
 
 
-def build_house(self, num_envs, env_spacing):
+def build_house(self):
     import imageio
     import json
 
@@ -468,7 +468,7 @@ def build_house(self, num_envs, env_spacing):
         self.distractor_cubes.append(cube)
 
 
-    self.scene.build(n_envs=num_envs, env_spacing=env_spacing)
+    self.scene.build()
 
     # from IPython import embed
 
