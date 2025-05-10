@@ -5,6 +5,7 @@ from gymnasium import spaces
 import warnings
 from gym_genesis.tasks.cube_pick import CubePick
 from gym_genesis.tasks.cube_stack import CubeStack
+from gym_genesis.tasks.cube_stack_one import CubeStackOne
 class GenesisEnv(gym.Env):
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
@@ -55,7 +56,7 @@ class GenesisEnv(gym.Env):
         terminated = np.array(is_success, dtype=bool)
         truncated = np.zeros(self.num_envs, dtype=bool)  # All False
 
-        info = {"is_success": is_success.tolist()}
+        info = {"is_success": is_success} #todo: add tolist
 
         return observation, reward, terminated, truncated, info
     
@@ -93,7 +94,7 @@ class GenesisEnv(gym.Env):
                             strip_environment_state=self.strip_environment_state,
                             )
         elif task_name == "cube_stack":
-            task = CubeStack(enable_pixels=self.enable_pixels,
+            task = CubeStackOne(enable_pixels=self.enable_pixels,
                             observation_height=self.observation_height, 
                             observation_width=self.observation_width,
                             num_envs = self.num_envs,
@@ -104,3 +105,4 @@ class GenesisEnv(gym.Env):
         else:
             raise NotImplementedError(task_name)
         return task
+
