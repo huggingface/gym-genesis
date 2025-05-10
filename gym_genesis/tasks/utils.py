@@ -385,11 +385,11 @@ def build_house(self):
 
     self.franka = self.scene.add_entity(
         material=gs.materials.Rigid(),
-        morph=gs.morphs.URDF(
-            file="/Users/jade/Development/gym-genesis/SO-ARM100/URDF/SO_5DOF_ARM100_05d.SLDASM/urdf/SO_5DOF_ARM100_05d.SLDASM.urdf",
+        morph=gs.morphs.MJCF(
+            file="xml/franka_emika_panda/panda.xml",
             collision=True,
             pos=(-0.5, 0, 0.7),
-            scale=1.0,
+            scale=0.6,
         ),
         vis_mode="collision"
     )
