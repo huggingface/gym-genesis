@@ -33,10 +33,8 @@ env = env.unwrapped
 #         grip = grip_open
 
 #     elif stage == "grasp":
-#         print("GRASP///////")
-#         # target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.045], device=device)
-#         target_z = max(0.7000312834978104 + 0.001, cube1_pos[2] - 0.03)
-#         target_pos = cube1_pos.clone()
+#         target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.045], device=device)
+#         # target_pos = cube1_pos + torch.tensor([0.0, 0.0, GRASP_OFFSET], device=gs.device)
 #         # target_pos[2] = 0.7000312834978104
 
 #         grip = grip_closed  # will interpolate later
@@ -83,8 +81,76 @@ env = env.unwrapped
 #             path[i][-2:] = grip
 #     print(f"[DEBUG] cube1_pos={cube1_pos.cpu().numpy()}, 0.7000312834978104")
 #     return path  # List of (9,) torch tensors on GPU
-
 def expert_policy(robot, obs, stage):
+    """
+    Returns a list of (9,) torch tensors on the same device (e.g., mps:0).
+    """
+    device = obs["environment_state"].device
+    eef = robot.get_link("hand")
+    quat = torch.tensor([0, 1, 0, 0], dtype=torch.float32, device=device)
+
+    cube1_pos = obs["environment_state"][:3]        # (3,)
+    cube2_pos = obs["environment_state"][11:14]     # (3,)
+    grip_open = 0.04
+    grip_closed = -0.02
+
+    if stage == "hover":
+        target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.25], device=device)
+        grip = grip_open
+
+    elif stage == "grasp":
+        target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.045], device=device)
+        grip = grip_closed  # will interpolate later
+
+    elif stage == "lift":
+        target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.28], device=device)
+        grip = grip_closed
+
+    elif stage == "place":
+        # descend slightly lower and stabilize
+        target_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.15], device=device)
+        grip = grip_closed
+
+    elif stage == "release":
+        # hover, descend, and hold before opening
+        target_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.15], device=device)
+        grip = grip_open
+
+    else:
+        raise ValueError(f"Unknown stage: {stage}")
+
+    # === Inverse Kinematics ===
+    q_goal = robot.inverse_kinematics(
+        link=eef,
+        pos=target_pos,
+        quat=quat,
+    )
+    q_goal[-2:] = grip
+
+    # === Plan path ===
+    path = robot.plan_path(qpos_goal=q_goal, num_waypoints=100)
+
+    if stage == "grasp":
+        for i in range(len(path) - 5):
+            path[i][-2:] = grip_open
+        for i in range(len(path) - 5, len(path)):
+            alpha = (i - (len(path) - 5)) / 5
+            g = (1 - alpha) * grip_open + alpha * grip_closed
+            path[i][-2:] = g
+    else:
+        for i in range(len(path)):
+            path[i][-2:] = grip
+
+    # Extra hold at target for place/release
+    if stage in ["place", "release"]:
+        for _ in range(15):  # hold still at the final qpos
+            path.append(q_goal.clone())
+
+    print(f"[DEBUG] cube1_pos={cube1_pos.cpu().numpy()}, stage={stage}")
+    return path  # List of (9,) torch tensors on GPU
+
+
+def expert_policy_1(robot, obs, stage):
     """
     Single-environment expert policy using Cartesian waypoints → IK → joint interpolation.
     Returns a list of (9,) torch tensors.

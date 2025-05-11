@@ -278,7 +278,11 @@ def build_house(self):
     self.scene = gs.Scene(
             sim_options=gs.options.SimOptions(dt=0.01),
             rigid_options=gs.options.RigidOptions(box_box_detection=True),
-            show_viewer=True,
+            viewer_options=viewer_options,
+            show_viewer=False,
+            vis_options=gs.options.VisOptions(
+                show_world_frame=False  # ✅ This disables the world frame XYZ arrows
+            ),
         )
 
     kitchen_floor_path = os.path.join(blenderkit_dir, "87bfcd24-98cb-4d2e-a8a0-57c3484a0503/Color.jpg")
@@ -313,26 +317,26 @@ def build_house(self):
         ),
     )
 
-    # fridge = self.scene.add_entity(
-    #     material=gs.materials.Rigid(),
-    #     morph=gs.morphs.Mesh(
-    #         file=f"{blenderkit_dir}/3e0d81cf-10c2-4b53-9a36-55d871acdfa4_1.glb",
-    #         scale=1.0,
-    #         pos=(-2.25, 0.7, 0),
-    #         euler=(90, 0, 90),
-    #         fixed=True,
-    #         collision=False,
-    #     ),
-    #     surface=gs.surfaces.Aluminium(roughness=0.2),
-    # )
+    fridge = self.scene.add_entity(
+        material=gs.materials.Rigid(),
+        morph=gs.morphs.Mesh(
+            file=f"{blenderkit_dir}/3e0d81cf-10c2-4b53-9a36-55d871acdfa4_1.glb",
+            scale=1.0,
+            pos=(-2.25, 0.7, 0),
+            euler=(90, 0, 90),
+            fixed=True,
+            collision=False,
+        ),
+        surface=gs.surfaces.Aluminium(roughness=0.2),
+    )
 
     # wall for kitchen
-    # add_wall(self.scene, -2.65, -2.65, -3, 3, texture=kitchen_wall_path, id=0, remove_region=None)  # z 1 to 2, y 3.2 to 3.8
-    # # add_wall(self.scene, -3, 3, -3, -3, texture=kitchen_wall_path, id=1, remove_region=[1.8,0,2.7,2])
-    # add_wall(self.scene, 1.6, 1.6, -3, 3, texture=kitchen_wall_path, id=2, remove_region=None)  # y 2 to 3, z 0 to 2
-    # add_wall(self.scene, -3, 3, 3, 3, texture=kitchen_wall_path, id=3, remove_region=None)
+    add_wall(self.scene, -2.65, -2.65, -3, 3, texture=kitchen_wall_path, id=0, remove_region=None)  # z 1 to 2, y 3.2 to 3.8
+    # add_wall(self.scene, -3, 3, -3, -3, texture=kitchen_wall_path, id=1, remove_region=[1.8,0,2.7,2])
+    add_wall(self.scene, 1.6, 1.6, -3, 3, texture=kitchen_wall_path, id=2, remove_region=None)  # y 2 to 3, z 0 to 2
+    add_wall(self.scene, -3, 3, 3, 3, texture=kitchen_wall_path, id=3, remove_region=None)
 
-    # place_on_ceil(self.scene, 0, 0, "56dd3ebb-5be3-4ad9-90df-58de2478a15b")
+    place_on_ceil(self.scene, 0, 0, "56dd3ebb-5be3-4ad9-90df-58de2478a15b")
 
     # wall for dining room
     # add_wall(self.scene, 0, 0, 0, 6, texture=dining_room_wall_path, id=16, remove_region=None)
@@ -372,17 +376,17 @@ def build_house(self):
 
     # cam = None
 
-    # self.scene.add_entity(
-    #     material=gs.materials.Rigid(),
-    #     morph=gs.morphs.Mesh(
-    #         file=os.path.join(blenderkit_dir, "59ed6b6e-6120-49c1-a3da-ad0a4adac26b_2.glb"),
-    #         scale=1.0,
-    #         euler=(90, 0, -90),
-    #         pos=(-0.24, 1.52, -0.07),
-    #         fixed=True,
-    #         collision=False,
-    #     ),
-    # )
+    self.scene.add_entity(
+        material=gs.materials.Rigid(),
+        morph=gs.morphs.Mesh(
+            file=os.path.join(blenderkit_dir, "59ed6b6e-6120-49c1-a3da-ad0a4adac26b_2.glb"),
+            scale=1.0,
+            euler=(90, 0, -90),
+            pos=(-0.24, 1.52, -0.07),
+            fixed=True,
+            collision=False,
+        ),
+    )
 
     ### add a kitchen island
     island = self.scene.add_entity(
@@ -394,23 +398,12 @@ def build_house(self):
             scale=1.0,
             fixed=True,
             collision=True,
-            convexify=True,
-            decompose_nonconvex=False,
+            convexify=False,
+            decompose_nonconvex=True,
         ),
         surface=gs.surfaces.Smooth(),
         # vis_mode="collision"
     )
-
-    # self.franka = self.scene.add_entity(
-    #     material=gs.materials.Rigid(),
-    #     morph=gs.morphs.MJCF(
-    #         file="xml/franka_emika_panda/panda.xml",
-    #         collision=False,
-    #         pos=(-0.5, 0, 0.7),
-    #         scale=0.6,
-    #     ),
-    #     # vis_mode="collision"
-    # )
 
     self.franka = self.scene.add_entity(
         material=gs.materials.Rigid(),
@@ -420,7 +413,7 @@ def build_house(self):
             pos=(-0.5, 0, 0.7),
             scale=0.6,
         ),
-        vis_mode="collision"
+        # vis_mode="collision"
     )
 
     # Load kitchen island mesh to compute top surface Z
@@ -440,7 +433,7 @@ def build_house(self):
             pos=(0.1, 0.0, island_top_z + 0.02 + z_offset),
         ),
         surface=gs.surfaces.Plastic(color=(1, 0, 0)),
-        # material=gs.materials.Rigid()
+        material=gs.materials.Rigid()
     )
 
     self.cube_2 = self.scene.add_entity(
@@ -449,7 +442,7 @@ def build_house(self):
             pos=(-0.1, 0.05, island_top_z + 0.02 + z_offset),
         ),
         surface=gs.surfaces.Plastic(color=(0, 1, 0)),
-        # material=gs.materials.Rigid()
+        material=gs.materials.Rigid()
     )
 
     # === Distractor cubes on the island ===
@@ -457,12 +450,13 @@ def build_house(self):
     for _ in range(3):
         x = np.random.uniform(-0.25, 0.25)
         y = np.random.uniform(-0.25, 0.25)
+        color = np.random.rand(3)
         cube = self.scene.add_entity(
             morph=gs.morphs.Box(
                 size=(0.04, 0.04, 0.04),
                 pos=(x, y, island_top_z + 0.02 + z_offset),
             ),
-            surface=gs.surfaces.Plastic(color=(0.5, 0.5, 0.5)),
+            surface=gs.surfaces.Plastic(color=tuple(color)),
             # material=gs.materials.Rigid()
         )
         self.distractor_cubes.append(cube)

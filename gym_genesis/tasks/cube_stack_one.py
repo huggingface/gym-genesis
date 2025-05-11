@@ -171,7 +171,7 @@ class CubeStackOne:
 
             # --- side camera ---
             self.cam_side.set_pose(
-                pos=np.array([1.5, 0.0, 0.8]),
+                pos=np.array([-1.5, 0.0, 0.8]),
                 lookat=np.array([0.0, 0.0, 0.5])
             )
             side_img = self.cam_side.render()[0]
