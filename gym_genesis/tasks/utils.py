@@ -727,6 +727,7 @@ def build_house_task1(self):
             file="assets/SO-ARM100/Simulation/SO101/so101.xml",
             collision=True,
             pos=(-0.5, 0, 0.7),
+            euler=(0, 0, 90),
             scale=1.3,
             decompose_robot_error_threshold=0.15,
             coacd_options=gs.options.CoacdOptions(

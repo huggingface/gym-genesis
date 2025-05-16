@@ -43,7 +43,7 @@
       <!-- Link shoulder -->
       <body name="shoulder" pos="0.0207909 -0.0230745 0.0948817" quat="7.88629e-16 -0.707107 -0.707107 7.69003e-16">
         <!-- Joint from base to shoulder -->
-        <joint axis="0 0 1" name="1" type="hinge" range="-1.9198621771937616 1.9198621771937634" class="sts3215"/>
+        <joint axis="0 0 1" name="1" type="hinge" range="-2.9198621771937616 2.9198621771937634" class="sts3215"/>
         <inertial pos="-0.0307604 -1.66727e-05 -0.0252713" mass="0.100006" fullinertia="8.3759e-05 8.10403e-05 2.39783e-05 7.55525e-08 -1.16342e-06 1.54663e-07"/>
         <!-- Part sts3215_03a_v1_2 -->
         <geom type="mesh" class="visual" pos="-0.0303992 0.000422241 -0.0417" quat="0.5 0.5 0.5 -0.5" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
