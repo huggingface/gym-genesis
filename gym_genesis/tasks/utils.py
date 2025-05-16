@@ -724,7 +724,7 @@ def build_house_task1(self):
     self.so_101 = self.scene.add_entity(
         material=gs.materials.Rigid(),
         morph=gs.morphs.MJCF(
-            file="/Users/jade/Development/Genesis/SO-ARM100/Simulation/SO101/so101.xml",
+            file="assets/SO-ARM100/Simulation/SO101/so101.xml",
             collision=True,
             pos=(-0.5, 0, 0.7),
             scale=1.3,
