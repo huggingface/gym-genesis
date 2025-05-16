@@ -24,8 +24,7 @@ def expert_policy(robot, obs, stage):
     eef = robot.get_link("hand")
     quat = torch.tensor([0, 1, 0, 0], dtype=torch.float32, device=gs.device)
     quat_batch = quat.unsqueeze(0).repeat(B, 1)  # (B, 4)
-
-
+    
     cube1_pos = obs["environment_state"][:, :3]      # (B, 3)
     cube2_pos = obs["environment_state"][:, 11:14]   # (B, 3)
 
@@ -44,7 +43,7 @@ def expert_policy(robot, obs, stage):
         grip_val = grip_closed
     elif stage == "place":
         hover_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.25])
-        target_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.18])
+        target_pos = cube2_pos + torch.tensor([0.0, 0.004, 0.18])
         grip_val = grip_closed
     elif stage == "release":
         hover_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.25])

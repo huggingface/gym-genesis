@@ -3,7 +3,7 @@ import numpy as np
 from gymnasium import spaces
 import random
 import torch
-from .utils import build_house
+from ..utils import build_house
 
 joints_name = (
     "joint1",
@@ -108,7 +108,9 @@ class CubeStackKitchen:
         self.scene.step()
 
         if self.enable_pixels:
-            self.cam.start_recording()
+            self.cam_top.start_recording()
+            self.cam_side.start_recording()
+            self.cam_wrist.start_recording()
 
         return self.get_obs()
 
@@ -182,15 +184,14 @@ class CubeStackKitchen:
                     side_img = self.cam_side.render()[0]
                     side_imgs.append(side_img)
 
-                    # --- wrist camera ---
-                    wrist_link = self.franka.get_link("hand")
-                    wrist_pos = wrist_link.get_pos(envs_idx=i)
-                    wrist_quat = wrist_link.get_quat(envs_idx=i)
-                    forward = gs.utils.quat_to_matrix(wrist_quat)[i, :, 2]
-                    lookat = wrist_pos + forward * 0.1
-                    self.cam_wrist.set_pose(pos=wrist_pos, lookat=lookat)
-                    wrist_img = self.cam_wrist.render()[0]
-                    wrist_imgs.append(wrist_img)
+                    # --- wrist view (approximation, fixed offset) ---
+                    wrist_pos = self.franka.get_link("hand").get_pos(envs_idx=i)        # (3,) tensor
+                    wrist_look = wrist_pos + torch.tensor([0.1, 0.0, 0.0], device=wrist_pos.device)  # (3,) tensor
+                    self.cam_wrist.set_pose(
+                        pos=wrist_pos[0].detach().cpu().numpy(),     # (3,) numpy
+                        lookat=wrist_look[0].detach().cpu().numpy()  # (3,) numpy
+                    )
+                    wrist_imgs.append(self.cam_wrist.render()[0])
 
                 pixels = {
                     "top": np.stack(top_imgs),

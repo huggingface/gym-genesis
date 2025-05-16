@@ -3,7 +3,7 @@ import numpy as np
 from gymnasium import spaces
 import random
 import torch
-from .utils import build_house
+from ..utils import build_house
 
 joints_name = (
     "joint1",

@@ -3,9 +3,9 @@ import genesis as gs
 import numpy as np
 from gymnasium import spaces
 import warnings
-from gym_genesis.tasks.cube_pick import CubePick
-from gym_genesis.tasks.cube_stack import CubeStack
-from gym_genesis.tasks.cube_stack_one import CubeStackOne
+from gym_genesis.tasks.so101.cube_pick import CubePick
+from gym_genesis.tasks.franka.cube_stack import CubeStack
+from gym_genesis.tasks.so101.cube_stack import CubeStackOne
 class GenesisEnv(gym.Env):
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
@@ -50,6 +50,8 @@ class GenesisEnv(gym.Env):
         info = {"is_success": [False] * self.num_envs} 
         return observation, info
     
+    def push(self):
+        self._env.scene.step()
     def step(self, action):
         _, reward, _, observation = self._env.step(action)
         is_success = (reward == 1)
@@ -72,13 +74,16 @@ class GenesisEnv(gym.Env):
 
     def close(self):
         pass
+
+    def get_cube(self):
+        return self._env.cube_1
     
     def get_obs(self):
         return self._env.get_obs()
     
     def get_robot(self):
         #TODO: (jadechovhari) add assertion that a robot exist
-        return self._env.franka
+        return self._env.so_101
 
     def render(self):
         return self._env.cam.render()[0] if self.enable_pixels else None
@@ -105,4 +110,3 @@ class GenesisEnv(gym.Env):
         else:
             raise NotImplementedError(task_name)
         return task
-
