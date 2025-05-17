@@ -39,7 +39,7 @@ def expert_policy(robot, obs, stage):
         grip_val = grip_closed
     elif stage == "place":
         hover_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.25])
-        target_pos = cube2_pos + torch.tensor([0.0, 0.004, 0.18])
+        target_pos = cube2_pos + torch.tensor([0.0, 0.00, 0.18])
         grip_val = grip_closed
     elif stage == "release":
         hover_pos = cube2_pos + torch.tensor([0.0, 0.0, 0.25])
