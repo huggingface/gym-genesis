@@ -734,7 +734,6 @@ def build_house_task1(self):
                     threshold=0.2,  # 0.1 by default
             ),
         ),
-        vis_mode="collision",
     )
 
     # Load kitchen island mesh to compute top surface Z
@@ -754,8 +753,7 @@ def build_house_task1(self):
             pos=(0.1, 0.0, island_top_z + 0.02 + z_offset),
         ),
         surface=gs.surfaces.Plastic(color=(1, 0, 0)),
-        # material=gs.materials.Rigid(),
-        vis_mode="collision"
+        material=gs.materials.Rigid(),
     )
 
     self.cube_2 = self.scene.add_entity(

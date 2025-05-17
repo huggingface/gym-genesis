@@ -64,37 +64,37 @@ class CubeStackOne:
         
     def reset(self):
         quat = torch.tensor([0, 0, 0, 1], dtype=torch.float32, device=gs.device)
-        z = self.island_top_z + 0.02 + 0.001  # match construction logic
-        # === Reset cube_1 (to be picked) ===
-        x1 = self._random.uniform(-0.3, -0.1)
-        y1 = self._random.uniform(-0.15, 0.15)
-        # pos1 = torch.tensor([x1, y1, z], dtype=torch.float32, device=gs.device)
-        pos1 = torch.tensor([-0.2, 0.0, z], dtype=torch.float32, device=gs.device)
+        z = self.island_top_z + 0.02 + 0.001
+
+        # === Sample positions until they are far enough apart ===
+        min_distance = 0.06  # minimum distance between cube_1 and cube_2 in XY
+
+        while True:
+            x1 = self._random.uniform(-0.3, -0.1)
+            y1 = self._random.uniform(-0.1, 0.1)
+            x2 = self._random.uniform(-0.3, -0.1)
+            y2 = self._random.uniform(-0.1, 0.1)
+            dx = x2 - x1
+            dy = y2 - y1
+            if (dx ** 2 + dy ** 2) ** 0.5 >= min_distance:
+                break
+
+        pos1 = torch.tensor([x1, y1, z], dtype=torch.float32, device=gs.device)
+        pos2 = torch.tensor([x2, y2, z], dtype=torch.float32, device=gs.device)
+
         self.cube_1.set_pos(pos1)
         self.cube_1.set_quat(quat)
-
-        # === Reset cube_2 (target) ===
-        x2 = self._random.uniform(-0.3, -0.1)
-        y2 = self._random.uniform(-0.15, 0.15)
-        # pos2 = torch.tensor([x2, y2, z], dtype=torch.float32, device=gs.device)
-        pos2 = torch.tensor([-0.25, 0.1, z], dtype=torch.float32, device=gs.device)
         self.cube_2.set_pos(pos2)
         self.cube_2.set_quat(quat)
 
         # === Distractor cubes ===
-        # if hasattr(self, "distractor_cubes"):
-        #     for cube in self.distractor_cubes:
-        #         xd = self._random.uniform(-0.35, 0.0)
-        #         yd = self._random.uniform(-0.2, 0.2)
-        #         pos_d = torch.tensor([xd, yd, z], dtype=torch.float32, device=gs.device)
-        #         cube.set_pos(pos_d)
-        #         cube.set_quat(quat)
         if hasattr(self, "distractor_cubes"):
             for i, cube in enumerate(self.distractor_cubes):
-                pos_d = torch.tensor([-0.1 + 0.05 * i, -0.1, z], dtype=torch.float32, device=gs.device)
+                xd = self._random.uniform(-0.35, 0.0)
+                yd = self._random.uniform(-0.2, 0.2)
+                pos_d = torch.tensor([xd, yd, z], dtype=torch.float32, device=gs.device)
                 cube.set_pos(pos_d)
                 cube.set_quat(quat)
-
         # === Reset robot to home pose ===
         qpos = np.array([0, 0, 0, 0, 0, 0])
         qpos_tensor = torch.tensor(qpos, dtype=torch.float32, device=gs.device)
