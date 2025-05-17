@@ -171,14 +171,15 @@ class CubeStackOne:
 
             # --- side camera ---
             self.cam_side.set_pose(
-                pos=np.array([-1.5, 0.0, 0.8]),
+                pos=np.array([0.0, -1.5, 1.2]),
                 lookat=np.array([0.0, 0.0, 0.5])
             )
             side_img = self.cam_side.render()[0]
 
             wrist_link = self.so_101.get_link("gripper")
             wrist_pos = wrist_link.get_pos()  # (3,) tensor on device
-            lookat = wrist_pos + torch.tensor([0.1, 0.0, 0.0], device=wrist_pos.device)
+            # lookat = wrist_pos + torch.tensor([0.1, 0.0, 0.0], device=wrist_pos.device)
+            lookat = wrist_pos + torch.tensor([0.1, 0.0, -0.1], device=wrist_pos.device)
 
             self.cam_wrist.set_pose(
                 pos=wrist_pos.cpu().numpy(),
