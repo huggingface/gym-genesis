@@ -606,9 +606,9 @@ def build_house_task1(self):
             sim_options=gs.options.SimOptions(dt=0.01),
             rigid_options=gs.options.RigidOptions(box_box_detection=True),
             viewer_options=viewer_options,
-            show_viewer=True,
+            show_viewer=False,
             vis_options=gs.options.VisOptions(
-                show_world_frame=True  # ✅ This disables the world frame XYZ arrows
+                show_world_frame=False  # ✅ This disables the world frame XYZ arrows
             ),
         )
 

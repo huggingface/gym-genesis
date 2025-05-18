@@ -6,12 +6,12 @@ import torch
 from ..utils import build_house_task1
 
 joints_name = (
-    "joint1",
-    "joint2",
-    "joint3",
-    "joint4",
-    "joint5",
-    "joint6",
+    "main_shoulder_pan",
+    "main_shoulder_lift",
+    "main_elbow_flex",
+    "main_wrist_flex",
+    "main_wrist_roll",
+    "main_gripper"
 )
 AGENT_DIM = len(joints_name)
 ENV_DIM = 10
@@ -152,8 +152,8 @@ class CubeStackOne:
         dist = torch.norm(diff).unsqueeze(0)  # (1,)
 
         agent_pos = torch.cat([eef_pos, eef_rot, gripper], dim=0).float()  # (8,)
+        agent_pos = self.so_101.get_qpos() # (6,)
         environment_state = torch.cat([cube1_pos, cube1_rot, diff, dist, cube2_pos], dim=0).float()  # (13,)
-
         obs = {
             "agent_pos": agent_pos,
             "environment_state": environment_state,
@@ -164,15 +164,14 @@ class CubeStackOne:
                 del obs["environment_state"]
             # --- top camera ---
             self.cam_top.set_pose(
-                pos=np.array([0.0, 0.0, 2.0]),
-                lookat=np.array([0.0, 0.0, 0.5])
+                pos=np.array([-0.0, 0.0, 1.5]),
+                lookat=np.array([-0.2, 0.0, 0.5])
             )
             top_img = self.cam_top.render()[0]
-
             # --- side camera ---
             self.cam_side.set_pose(
-                pos=np.array([0.0, -1.5, 1.2]),
-                lookat=np.array([0.0, 0.0, 0.5])
+                pos=np.array([0.5, -0.8, 1.2]),    # Move closer along Y, lower height a bit
+                lookat=np.array([0.0, 0.0, 0.5])    # Keep looking at center of table
             )
             side_img = self.cam_side.render()[0]
 
