@@ -680,6 +680,7 @@ def build_house_task1(self):
             GUI=False,
         )
 
+        
         # === Wrist camera (attached to robot link, e.g., hand or wrist) ===
         self.cam_wrist = self.scene.add_camera(
             res=(640, 480),
@@ -724,7 +725,7 @@ def build_house_task1(self):
     self.so_101 = self.scene.add_entity(
         material=gs.materials.Rigid(),
         morph=gs.morphs.MJCF(
-            file="assets/SO-ARM100/Simulation/SO101/so101.xml",
+            file="assets/SO-ARM100/Simulation/SO101/so101_old_calib.xml",
             collision=True,
             pos=(-0.5, 0, 0.7),
             euler=(0, 0, 90),
@@ -735,6 +736,7 @@ def build_house_task1(self):
             ),
         ),
     )
+    
 
     # Load kitchen island mesh to compute top surface Z
     island_uid = "45a68868-0c41-45d4-98c5-7721fc6c1445"

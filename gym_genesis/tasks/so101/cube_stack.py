@@ -174,18 +174,27 @@ class CubeStackOne:
                 lookat=np.array([0.0, 0.0, 0.5])    # Keep looking at center of table
             )
             side_img = self.cam_side.render()[0]
-
+            from scipy.spatial.transform import Rotation as R
             wrist_link = self.so_101.get_link("gripper")
-            wrist_pos = wrist_link.get_pos()  # (3,) tensor on device
-            # lookat = wrist_pos + torch.tensor([0.1, 0.0, 0.0], device=wrist_pos.device)
-            lookat = wrist_pos + torch.tensor([0.1, 0.0, -0.1], device=wrist_pos.device)
+            wrist_pos = wrist_link.get_pos()
+            wrist_quat = wrist_link.get_quat().cpu().numpy()
+            wrist_rot = R.from_quat(wrist_quat, scalar_first=True)
+            few_radians = 0.4
+            # camera_rot = R.from_rotvec([few_radians, 0, 0]) * wrist_rot
+            # camera_rot = R.from_rotvec([0, 0, np.pi])*R.from_rotvec([-few_radians, 0, 0]) * wrist_rot
+            camera_rot = R.from_rotvec([-few_radians, 0, 0]) * wrist_rot
+            
+            camera_pos = wrist_pos.cpu().numpy() + np.array([0.015, 0.1, -0.035])
+            camera_transform = np.eye(4)
+            camera_transform[:3, :3] = camera_rot.as_matrix()
+            camera_transform[:3, 3] = camera_pos
 
-            self.cam_wrist.set_pose(
-                pos=wrist_pos.cpu().numpy(),
-                lookat=lookat.cpu().numpy(),
-            )
-
+            self.cam_wrist.set_pose(camera_transform)
+            # camera_pos = wrist_pos + torch.tensor([0.0, -0.05, -0.05], device=wrist_pos.device)
+            # lookat = camera_pos + torch.tensor([0.05, 0.08, -0.15], device=wrist_pos.device)
+            # self.cam_wrist.set_pose(pos=camera_pos.cpu().numpy(), lookat=lookat.cpu().numpy(),up=np.array([0.0, 0.0, -1.0]))
             wrist_img = self.cam_wrist.render()[0]
+            wrist_img = np.rot90(wrist_img, k=2)
             pixels = {
                 "top": top_img,
                 "side": side_img,

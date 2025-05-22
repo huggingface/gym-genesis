@@ -1,0 +1,5 @@
+wrist_link = self.so_101.get_link("gripper")
+wrist_pos = wrist_link.get_pos()
+camera_pos = wrist_pos + torch.tensor([0.0, -0.05, -0.05], device=wrist_pos.device)
+lookat = camera_pos + torch.tensor([0.05, 0.08, -0.15], device=wrist_pos.device)
+self.cam_wrist.set_pose(pos=camera_pos.cpu().numpy(), lookat=lookat.cpu().numpy(),up=np.array([0.0, 0.0, -1.0]))

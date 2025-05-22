@@ -41,7 +41,10 @@ def expert_policy_v2(robot, obs, stage):
     if stage == "hover":
         target_pos = cube1_pos + torch.tensor([-0.01, 0.0, 0.25], device=gs.device)
         grip_val = grip_open
-
+    elif stage == "wake":
+        current_pos = eef.get_pos()
+        target_pos = current_pos + torch.tensor([0.0, 0.0, 0.25], device=gs.device)
+        grip_val = grip_open
     elif stage == "grasp":
         target_pos = cube1_pos + torch.tensor([-0.01, 0.0, 0.045], device=gs.device)
         grip_val = grip_closed
@@ -105,7 +108,7 @@ def expert_policy_v2(robot, obs, stage):
 
     return path
 
-# # === Setup Dataset ===
+# === Setup Dataset ===
 agent_shape = (8,)
 action_shape = (6,)
 env_shape = (14,)
@@ -114,7 +117,7 @@ lerobot_dataset = LeRobotDataset.create(
     repo_id=None,
     root=dataset_path,
     robot_type="so101",
-    fps=60,
+    fps=30,
     use_videos=True,
     features={
         "observation.state": {
@@ -159,7 +162,7 @@ lerobot_dataset = LeRobotDataset.create(
     },
 )
 
-stages = ["hover", "grasp", "lift", "place", "release"]
+stages = ["wake", "hover", "grasp", "lift", "place", "release"]
 # stages = ["hover", "grasp", "lift", "place", "release"]
 # === run Episodes ===
 for ep in range(10):
@@ -186,7 +189,9 @@ for ep in range(10):
 
             # imageio.imwrite(f"top.png", obs["pixels"]["top"])
             # imageio.imwrite(f"side.png", obs["pixels"]["side"])
-            # # imageio.imwrite(f"debug_images/wrist.png", obs["pixels"]["wrist"])
+            # imageio.imwrite(f"wrist.png", obs["pixels"]["wrist"])
+            
+            # imageio.imwrite(f"debug_images/wrist.png", obs["pixels"]["wrist"])
 
 
     # Convert to arrays (T, ...)
