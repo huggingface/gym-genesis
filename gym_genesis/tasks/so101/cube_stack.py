@@ -97,7 +97,7 @@ class CubeStackOne:
                 cube.set_quat(quat)
         # === Reset robot to home pose ===
         # qpos = np.array([0, 0, 0, 0, 0, 0]) 
-        qpos_tensor = torch.deg2rad(torch.tensor([0, 0, 0, 0, 0, 0], dtype=torch.float32, device=gs.device))
+        # qpos_tensor = torch.deg2rad(torch.tensor([0, 0, 0, 0, 0, 0], dtype=torch.float32, device=gs.device))
         qpos_tensor = torch.deg2rad(torch.tensor([0, 177, 165, 72, 83, 0], dtype=torch.float32, device=gs.device))
         self.so_101.set_qpos(qpos_tensor, zero_velocity=True)
         self.so_101.control_dofs_position(qpos_tensor[:5], self.motors_dof)
