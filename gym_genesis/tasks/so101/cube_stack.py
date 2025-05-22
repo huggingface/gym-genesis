@@ -96,8 +96,8 @@ class CubeStackOne:
                 cube.set_pos(pos_d)
                 cube.set_quat(quat)
         # === Reset robot to home pose ===
-        qpos = np.array([0, 0, 0, 0, 0, 0])
-        qpos_tensor = torch.tensor(qpos, dtype=torch.float32, device=gs.device)
+        # qpos = np.array([0, 0, 0, 0, 0, 0]) 
+        qpos_tensor = torch.deg2rad(torch.tensor([0, 177, 165, 72, 83, 0], dtype=torch.float32, device=gs.device))
         self.so_101.set_qpos(qpos_tensor, zero_velocity=True)
         self.so_101.control_dofs_position(qpos_tensor[:5], self.motors_dof)
         self.so_101.control_dofs_position(qpos_tensor[5:], self.fingers_dof)
@@ -170,8 +170,8 @@ class CubeStackOne:
             top_img = self.cam_top.render()[0]
             # --- side camera ---
             self.cam_side.set_pose(
-                pos=np.array([0.5, -0.8, 1.2]),    # Move closer along Y, lower height a bit
-                lookat=np.array([0.0, 0.0, 0.5])    # Keep looking at center of table
+                pos=np.array([0.07, -1.0, 1.6]),    # Move closer along Y, lower height a bit
+                lookat=np.array([-0.08, 0.0, 0.7])    # Keep looking at center of table
             )
             side_img = self.cam_side.render()[0]
             from scipy.spatial.transform import Rotation as R

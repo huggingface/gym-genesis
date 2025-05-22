@@ -593,7 +593,7 @@ def build_house_task2(self):
 def build_house_task1(self):
     import imageio
     import json
-
+    
     viewer_options = gs.options.ViewerOptions(
         camera_pos=(0, -1, 2),
         camera_lookat=(0, 0, 0.2),
@@ -611,6 +611,8 @@ def build_house_task1(self):
                 show_world_frame=False  # ✅ This disables the world frame XYZ arrows
             ),
         )
+
+
 
     kitchen_floor_path = os.path.join(blenderkit_dir, "87bfcd24-98cb-4d2e-a8a0-57c3484a0503/Color.jpg")
     kitchen_wall_path = os.path.join(
@@ -676,7 +678,7 @@ def build_house_task1(self):
             res=(self.observation_width, self.observation_height),
             pos=(1.0, 0.0, 0.5),
             lookat=(0.0, 0.0, 0.5),
-            fov=40,
+            fov=30,
             GUI=False,
         )
 
@@ -726,6 +728,7 @@ def build_house_task1(self):
         material=gs.materials.Rigid(),
         morph=gs.morphs.MJCF(
             file="assets/SO-ARM100/Simulation/SO101/so101_old_calib.xml",
+            # file="assets/SO-ARM100_1/Simulation/SO101/so101.xml",
             collision=True,
             pos=(-0.5, 0, 0.7),
             euler=(0, 0, 90),

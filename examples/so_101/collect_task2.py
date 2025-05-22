@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import trange
 from pathlib import Path
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+# from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import torch
 import imageio
 import genesis as gs
@@ -108,61 +108,61 @@ def expert_policy_v2(robot, obs, stage):
 
     return path
 
-# === Setup Dataset ===
-agent_shape = (8,)
-action_shape = (6,)
-env_shape = (14,)
-dataset_path = Path("data/stack_cube")
-lerobot_dataset = LeRobotDataset.create(
-    repo_id=None,
-    root=dataset_path,
-    robot_type="so101",
-    fps=30,
-    use_videos=True,
-    features={
-        "observation.state": {
-            "dtype": "float32",
-            "shape": (6,),
-            "names": [
-                "main_shoulder_pan",
-                "main_shoulder_lift",
-                "main_elbow_flex",
-                "main_wrist_flex",
-                "main_wrist_roll",
-                "main_gripper"
-            ]
-        },
-        "action": {
-            "dtype": "float32",
-            "shape": (6,),
-            "names": [
-                "main_shoulder_pan",
-                "main_shoulder_lift",
-                "main_elbow_flex",
-                "main_wrist_flex",
-                "main_wrist_roll",
-                "main_gripper"
-            ]
-        },
-        "observation.image.top": {
-            "dtype": "video",
-            "shape": (480, 640, 3),
-            "names": ["height", "width", "channels"]
-        },
-        "observation.image.side": {
-            "dtype": "video",
-            "shape": (480, 640, 3),
-            "names": ["height", "width", "channels"]
-        },
-        "observation.image.wrist": {
-            "dtype": "video",
-            "shape": (480, 640, 3),
-            "names": ["height", "width", "channels"]
-        },
-    },
-)
-
-stages = ["wake", "hover", "grasp", "lift", "place", "release"]
+# # === Setup Dataset ===
+# agent_shape = (8,)
+# action_shape = (6,)
+# env_shape = (14,)
+# dataset_path = Path("data/stack_cube")
+# lerobot_dataset = LeRobotDataset.create(
+#     repo_id=None,
+#     root=dataset_path,
+#     robot_type="so101",
+#     fps=30,
+#     use_videos=True,
+#     features={
+#         "observation.state": {
+#             "dtype": "float32",
+#             "shape": (6,),
+#             "names": [
+#                 "main_shoulder_pan",
+#                 "main_shoulder_lift",
+#                 "main_elbow_flex",
+#                 "main_wrist_flex",
+#                 "main_wrist_roll",
+#                 "main_gripper"
+#             ]
+#         },
+#         "action": {
+#             "dtype": "float32",
+#             "shape": (6,),
+#             "names": [
+#                 "main_shoulder_pan",
+#                 "main_shoulder_lift",
+#                 "main_elbow_flex",
+#                 "main_wrist_flex",
+#                 "main_wrist_roll",
+#                 "main_gripper"
+#             ]
+#         },
+#         "observation.image.top": {
+#             "dtype": "video",
+#             "shape": (480, 640, 3),
+#             "names": ["height", "width", "channels"]
+#         },
+#         "observation.image.side": {
+#             "dtype": "video",
+#             "shape": (480, 640, 3),
+#             "names": ["height", "width", "channels"]
+#         },
+#         "observation.image.wrist": {
+#             "dtype": "video",
+#             "shape": (480, 640, 3),
+#             "names": ["height", "width", "channels"]
+#         },
+#     },
+# )
+# no more "wake", 
+stages = ["hover", "grasp", "lift", "place", "release"]
 # stages = ["hover", "grasp", "lift", "place", "release"]
 # === run Episodes ===
 for ep in range(10):
@@ -177,42 +177,43 @@ for ep in range(10):
             obs, reward, done, _, _ = env.step(action)
             # print(stage)
 
-            rad2deg = 180 / np.pi
-            all_states.append((obs["agent_pos"] * rad2deg).detach().cpu().numpy())
-            all_actions.append((action * rad2deg).detach().cpu().numpy())
-            all_rewards.append(reward)
+            # rad2deg = 180 / np.pi
+            # all_states.append((obs["agent_pos"] * rad2deg).detach().cpu().numpy())
+            # all_actions.append((action * rad2deg).detach().cpu().numpy())
+            # all_rewards.append(reward)
 
-            # Each image is shape (H, W, 3)
-            top_frames.append(obs["pixels"]["top"])
-            side_frames.append(obs["pixels"]["side"])
-            wrist_frames.append(obs["pixels"]["wrist"])
+            # # Each image is shape (H, W, 3)
+            # top_frames.append(obs["pixels"]["top"])
+            # side_frames.append(obs["pixels"]["side"])
+            # wrist_frames.append(obs["pixels"]["wrist"])
 
             # imageio.imwrite(f"top.png", obs["pixels"]["top"])
-            # imageio.imwrite(f"side.png", obs["pixels"]["side"])
+            imageio.imwrite(f"side.png", obs["pixels"]["side"])
+            breakpoint()
             # imageio.imwrite(f"wrist.png", obs["pixels"]["wrist"])
             
             # imageio.imwrite(f"debug_images/wrist.png", obs["pixels"]["wrist"])
 
 
-    # Convert to arrays (T, ...)
-    states_arr = np.stack(all_states)
-    actions_arr = np.stack(all_actions)
-    rewards_arr = np.stack(all_rewards)
-    top_arr = np.stack(top_frames)
-    side_arr = np.stack(side_frames)
-    wrist_arr = np.stack(wrist_frames)
+    # # Convert to arrays (T, ...)
+    # states_arr = np.stack(all_states)
+    # actions_arr = np.stack(all_actions)
+    # rewards_arr = np.stack(all_rewards)
+    # top_arr = np.stack(top_frames)
+    # side_arr = np.stack(side_frames)
+    # wrist_arr = np.stack(wrist_frames)
 
-    if rewards_arr[-1] > 0:
-        print(f"✅ Saving episode {ep + 1}")
-        for t in range(states_arr.shape[0]):
-            lerobot_dataset.add_frame({
-                "observation.state": states_arr[t],
-                "action": actions_arr[t],
-                "observation.image.top": top_arr[t],
-                "observation.image.side": side_arr[t],
-                "observation.image.wrist": wrist_arr[t],
-                "task": "pick up the red cube and place it on top of the green cube",
-            })
-        lerobot_dataset.save_episode()
-    else:
-        print(f"🚫 Skipping episode {ep + 1} — reward was always 0")
+    # if rewards_arr[-1] > 0:
+    #     print(f"✅ Saving episode {ep + 1}")
+    #     for t in range(states_arr.shape[0]):
+    #         lerobot_dataset.add_frame({
+    #             "observation.state": states_arr[t],
+    #             "action": actions_arr[t],
+    #             "observation.image.top": top_arr[t],
+    #             "observation.image.side": side_arr[t],
+    #             "observation.image.wrist": wrist_arr[t],
+    #             "task": "pick up the red cube and place it on top of the green cube",
+    #         })
+    #     lerobot_dataset.save_episode()
+    # else:
+    #     print(f"🚫 Skipping episode {ep + 1} — reward was always 0")
