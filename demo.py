@@ -50,5 +50,4 @@ qpos_tensor = torch.deg2rad(torch.tensor([0, 177, 165, 72, 83, 0], dtype=torch.f
 so_101.set_qpos(qpos_tensor, zero_velocity=True)
 so_101.control_dofs_position(qpos_tensor[:5], motors_dof)
 so_101.control_dofs_position(qpos_tensor[5:], fingers_dof)
-breakpoint()
 scene.step()
