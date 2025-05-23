@@ -9,8 +9,8 @@ joints_name = (
     "main_shoulder_pan",
     "main_shoulder_lift",
     "main_elbow_flex",
-    "main_wrist_flex",
     "main_wrist_roll",
+    "main_wrist_flex",
     "main_gripper"
 )
 AGENT_DIM = len(joints_name)
@@ -98,13 +98,12 @@ class CubeStackOne:
         # === Reset robot to home pose ===
         # qpos = np.array([0, 0, 0, 0, 0, 0]) 
         # qpos_tensor = torch.deg2rad(torch.tensor([0, 0, 0, 0, 0, 0], dtype=torch.float32, device=gs.device))
-        qpos_tensor = torch.deg2rad(torch.tensor([0, 177, 165, 72, 83, 0], dtype=torch.float32, device=gs.device))
+        qpos_tensor = torch.deg2rad(torch.tensor([0, -177, 165, 50, 83, 0], dtype=torch.float32, device=gs.device))
         self.so_101.set_qpos(qpos_tensor, zero_velocity=True)
         self.so_101.control_dofs_position(qpos_tensor[:5], self.motors_dof)
         self.so_101.control_dofs_position(qpos_tensor[5:], self.fingers_dof)
 
         self.scene.step()
-
         if self.enable_pixels:
             self.cam_top.start_recording()
             self.cam_side.start_recording()
@@ -180,7 +179,7 @@ class CubeStackOne:
             wrist_pos = wrist_link.get_pos()
             wrist_quat = wrist_link.get_quat().cpu().numpy()
             wrist_rot = R.from_quat(wrist_quat, scalar_first=True)
-            few_radians = 0.4
+            few_radians = 0.3
             # camera_rot = R.from_rotvec([few_radians, 0, 0]) * wrist_rot
             # camera_rot = R.from_rotvec([0, 0, np.pi])*R.from_rotvec([-few_radians, 0, 0]) * wrist_rot
             camera_rot = R.from_rotvec([-few_radians, 0, 0]) * wrist_rot

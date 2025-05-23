@@ -178,8 +178,14 @@ for ep in range(10):
             # print(stage)
 
             # rad2deg = 180 / np.pi
-            # all_states.append((obs["agent_pos"] * rad2deg).detach().cpu().numpy())
-            # all_actions.append((action * rad2deg).detach().cpu().numpy())
+            # # all_states.append((obs["agent_pos"] * rad2deg).detach().cpu().numpy())
+            # pos_deg = (obs["agent_pos"] * rad2deg).detach().cpu().numpy()
+            # pos_deg[1] *= -1  # flip joint 2
+            # all_states.append(pos_deg)
+            # act_deg = (action * rad2deg).detach().cpu().numpy()
+            # act_deg[1] *= -1
+            # all_actions.append(act_deg)
+            # # all_actions.append((action * rad2deg).detach().cpu().numpy())
             # all_rewards.append(reward)
 
             # # Each image is shape (H, W, 3)
@@ -188,10 +194,9 @@ for ep in range(10):
             # wrist_frames.append(obs["pixels"]["wrist"])
 
             # imageio.imwrite(f"top.png", obs["pixels"]["top"])
-            imageio.imwrite(f"side.png", obs["pixels"]["side"])
+            # imageio.imwrite(f"side.png", obs["pixels"]["side"])
+            imageio.imwrite(f"wrist.png", obs["pixels"]["wrist"])
             breakpoint()
-            # imageio.imwrite(f"wrist.png", obs["pixels"]["wrist"])
-            
             # imageio.imwrite(f"debug_images/wrist.png", obs["pixels"]["wrist"])
 
 

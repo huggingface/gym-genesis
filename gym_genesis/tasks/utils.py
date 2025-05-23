@@ -691,6 +691,9 @@ def build_house_task1(self):
             fov=90,
             GUI=False,
         )
+        # add znear
+        self.cam_wrist.znear = 0.001
+        self.cam_wrist.zfar=0.3
 
 
     # cam = None
