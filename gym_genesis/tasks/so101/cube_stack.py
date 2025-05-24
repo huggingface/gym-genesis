@@ -9,8 +9,8 @@ joints_name = (
     "main_shoulder_pan",
     "main_shoulder_lift",
     "main_elbow_flex",
-    "main_wrist_roll",
     "main_wrist_flex",
+    "main_wrist_roll",
     "main_gripper"
 )
 AGENT_DIM = len(joints_name)
@@ -98,7 +98,7 @@ class CubeStackOne:
         # === Reset robot to home pose ===
         # qpos = np.array([0, 0, 0, 0, 0, 0]) 
         # qpos_tensor = torch.deg2rad(torch.tensor([0, 0, 0, 0, 0, 0], dtype=torch.float32, device=gs.device))
-        qpos_tensor = torch.deg2rad(torch.tensor([0, -177, 165, 50, 83, 0], dtype=torch.float32, device=gs.device))
+        qpos_tensor = torch.deg2rad(torch.tensor([0, -177, 165, 72, -83, 0], dtype=torch.float32, device=gs.device))
         self.so_101.set_qpos(qpos_tensor, zero_velocity=True)
         self.so_101.control_dofs_position(qpos_tensor[:5], self.motors_dof)
         self.so_101.control_dofs_position(qpos_tensor[5:], self.fingers_dof)
@@ -164,7 +164,7 @@ class CubeStackOne:
                 del obs["environment_state"]
             # --- top camera ---
             self.cam_top.set_pose(
-                pos=np.array([-0.0, 0.0, 1.5]),
+                pos=np.array([-0.05, 0.0, 1.8]),
                 lookat=np.array([-0.2, 0.0, 0.5])
             )
             top_img = self.cam_top.render()[0]
@@ -179,12 +179,12 @@ class CubeStackOne:
             wrist_pos = wrist_link.get_pos()
             wrist_quat = wrist_link.get_quat().cpu().numpy()
             wrist_rot = R.from_quat(wrist_quat, scalar_first=True)
-            few_radians = 0.3
-            # camera_rot = R.from_rotvec([few_radians, 0, 0]) * wrist_rot
-            # camera_rot = R.from_rotvec([0, 0, np.pi])*R.from_rotvec([-few_radians, 0, 0]) * wrist_rot
+            few_radians = 0.1
             camera_rot = R.from_rotvec([-few_radians, 0, 0]) * wrist_rot
+            camera_rot = wrist_rot * R.from_euler("x", -np.pi / 2 + 0.8)
+
             
-            camera_pos = wrist_pos.cpu().numpy() + np.array([0.015, 0.1, -0.035])
+            camera_pos = wrist_pos.cpu().numpy() + np.array([0.09, 0.0, -0.08])
             camera_transform = np.eye(4)
             camera_transform[:3, :3] = camera_rot.as_matrix()
             camera_transform[:3, 3] = camera_pos

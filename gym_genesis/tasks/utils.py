@@ -688,12 +688,12 @@ def build_house_task1(self):
             res=(640, 480),
             pos=(0.4, 0.0, 0.7), # mimic wrist pos?
             lookat=(0, 0, 1),
-            fov=90,
+            fov=70,
             GUI=False,
         )
         # add znear
-        self.cam_wrist.znear = 0.001
-        self.cam_wrist.zfar=0.3
+        # self.cam_wrist.znear = 0.01
+        # self.cam_wrist.zfar=10
 
 
     # cam = None
