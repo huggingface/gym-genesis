@@ -195,12 +195,13 @@ def get_obs(self):
             side_imgs.append(self.cam_side.render()[0])
 
             # --- wrist camera ---
+            env_offset = self.scene.envs_offset[i]
             wrist_link = self.so_101.get_link("gripper", i)
             wrist_pos = wrist_link.get_pos()
-            wrist_quat = wrist_link.get_quat().cpu().numpy()
+            wrist_quat = wrist_link.get_quat().cpu().numpy()[i]
             wrist_rot = R.from_quat(wrist_quat, scalar_first=True)
             camera_rot = wrist_rot * R.from_euler("x", -np.pi / 2 + 0.8)
-            camera_pos = wrist_pos.cpu().numpy() + np.array([0.09, 0.0, -0.08])
+            camera_pos = wrist_pos[i].cpu().numpy() + np.array([0.09, 0.0, -0.08]) + env_offset
 
             cam_tf = np.eye(4)
             cam_tf[:3, :3] = camera_rot.as_matrix()
