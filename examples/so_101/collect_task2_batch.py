@@ -13,7 +13,8 @@ env = gym.make(
     enable_pixels=True,
     camera_capture_mode="global",
     strip_environment_state=False,
-    num_envs=3
+    num_envs=100,
+    env_spacing=(10, 10),
 )
 env = env.unwrapped
 
@@ -169,6 +170,7 @@ lerobot_dataset = LeRobotDataset.create(
 # no more "wake", 
 stages = ["hover", "grasp", "lift", "place", "release", "go_back"]
 # stages = ["hover", "grasp", "lift", "place", "release"]
+top_cam, side_cam, wrist_cam = env.get_cams()
 # === run Episodes ===
 for ep in range(10):
     print(f"\n🎬 Starting episode {ep+1}")
@@ -183,7 +185,6 @@ for ep in range(10):
         action_path = expert_policy_v2(env.get_robot(), obs, stage)
         for action in action_path:  # (B, 6)
             obs, reward, done, _, _ = env.step(action)
-
             all_agent_states.append(obs["agent_pos"].detach().cpu().numpy())  # (B, 6)
             all_actions.append(action.detach().cpu().numpy())                 # (B, 6)
             all_rewards.append(reward.detach().cpu().numpy())                # (B,)
@@ -198,6 +199,14 @@ for ep in range(10):
     top_arr = np.stack(top_frames)           # (T, B, H, W, 3)
     side_arr = np.stack(side_frames)
     wrist_arr = np.stack(wrist_frames)
+    all_agent_states.clear()
+    all_actions.clear()
+    top_frames.clear()
+    side_frames.clear()
+    wrist_frames.clear()
+    top_cam.stop_recording("top.mp4")
+    side_cam.stop_recording("side.mp4")
+    wrist_cam.stop_recording("wrist.mp4")
 
     for b in range(B):
         if rewards_arr[-1, b] > 0:
@@ -214,3 +223,6 @@ for ep in range(10):
             lerobot_dataset.save_episode()
         else:
             print(f"🚫 Skipping env {b} in episode {ep + 1} — final reward was 0")
+        del states_arr, actions_arr, rewards_arr, top_arr, side_arr, wrist_arr
+        torch.cuda.empty_cache()
+        gc.collect()
