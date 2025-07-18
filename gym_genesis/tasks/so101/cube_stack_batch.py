@@ -4,7 +4,7 @@ from gymnasium import spaces
 import random
 import torch
 from ..utils import build_house_task1
-
+from scipy.spatial.transform import Rotation as R
 joints_name = (
     "main_shoulder_pan",
     "main_shoulder_lift",

@@ -276,62 +276,105 @@ lerobot_dataset = LeRobotDataset.create(
 stages = ["hover", "grasp", "lift", "place", "release", "go_back"]
 # stages = ["hover", "grasp", "lift", "place", "release"]
 # === run Episodes ===
+# for ep in range(10):
+#     print(f"\n🎬 Starting episode {ep+1}")
+#     obs, _ = env.reset()
+#     all_states, all_actions = [], []
+#     top_frames, side_frames, wrist_frames = [], [], []
+#     all_rewards = []
+#     for stage in stages:
+#         action_path = expert_policy_v2(env.get_robot(), obs, stage)
+#         for action in action_path:
+#             obs, reward, done, _, _ = env.step(action)
+#             # print(stage)
+
+#             rad2deg = 180 / np.pi
+#             # all_states.append((obs["agent_pos"] * rad2deg).detach().cpu().numpy())
+#             pos_deg = (obs["agent_pos"] * rad2deg).detach().cpu().numpy()
+#             pos_deg[1] *= -1  # flip joint 2
+#             pos_deg[4] *= -1  # flip joint 2
+#             all_states.append(pos_deg)
+#             act_deg = (action * rad2deg).detach().cpu().numpy()
+#             act_deg[1] *= -1
+#             act_deg[4] *= -1
+#             all_actions.append(act_deg)
+#             # all_actions.append((action * rad2deg).detach().cpu().numpy())
+#             all_rewards.append(reward)
+
+#             # Each image is shape (H, W, 3)
+#             top_frames.append(obs["pixels"]["top"])
+#             side_frames.append(obs["pixels"]["side"])
+#             wrist_frames.append(obs["pixels"]["wrist"])
+
+#             # imageio.imwrite(f"top.png", obs["pixels"]["top"])
+#             # imageio.imwrite(f"side.png", obs["pixels"]["side"])
+#             # imageio.imwrite(f"wrist.png", obs["pixels"]["wrist"])
+#             # breakpoint()
+#             # imageio.imwrite(f"debug_images/wrist.png", obs["pixels"]["wrist"])
+
+
+#     # Convert to arrays (T, ...)
+#     states_arr = np.stack(all_states)
+#     actions_arr = np.stack(all_actions)
+#     rewards_arr = np.stack(all_rewards)
+#     top_arr = np.stack(top_frames)
+#     side_arr = np.stack(side_frames)
+#     wrist_arr = np.stack(wrist_frames)
+
+#     if rewards_arr[-1] > 0:
+#         print(f"✅ Saving episode {ep + 1}")
+#         for t in range(states_arr.shape[0]):
+#             lerobot_dataset.add_frame({
+#                 "observation.state": states_arr[t],
+#                 "action": actions_arr[t],
+#                 "observation.image.top": top_arr[t],
+#                 "observation.image.side": side_arr[t],
+#                 "observation.image.wrist": wrist_arr[t],
+#                 "task": "pick up the red cube and place it on top of the green cube",
+#             })
+#         lerobot_dataset.save_episode()
+#     else:
+#         print(f"🚫 Skipping episode {ep + 1} — reward was always 0")
+    
 for ep in range(10):
-    print(f"\n🎬 Starting episode {ep+1}")
+    print(f"\n🎬 Starting episode {ep + 1}")
     obs, _ = env.reset()
-    all_states, all_actions = [], []
-    top_frames, side_frames, wrist_frames = [], [], []
-    all_rewards = []
+
+    rewards_arr = []
+
     for stage in stages:
         action_path = expert_policy_v2(env.get_robot(), obs, stage)
         for action in action_path:
             obs, reward, done, _, _ = env.step(action)
-            # print(stage)
 
             rad2deg = 180 / np.pi
-            # all_states.append((obs["agent_pos"] * rad2deg).detach().cpu().numpy())
             pos_deg = (obs["agent_pos"] * rad2deg).detach().cpu().numpy()
-            pos_deg[1] *= -1  # flip joint 2
-            pos_deg[4] *= -1  # flip joint 2
-            all_states.append(pos_deg)
+            pos_deg[1] *= -1
+            pos_deg[4] *= -1
+
             act_deg = (action * rad2deg).detach().cpu().numpy()
             act_deg[1] *= -1
             act_deg[4] *= -1
-            all_actions.append(act_deg)
-            # all_actions.append((action * rad2deg).detach().cpu().numpy())
-            all_rewards.append(reward)
 
-            # Each image is shape (H, W, 3)
-            top_frames.append(obs["pixels"]["top"])
-            side_frames.append(obs["pixels"]["side"])
-            wrist_frames.append(obs["pixels"]["wrist"])
-
-            # imageio.imwrite(f"top.png", obs["pixels"]["top"])
-            # imageio.imwrite(f"side.png", obs["pixels"]["side"])
-            # imageio.imwrite(f"wrist.png", obs["pixels"]["wrist"])
-            # breakpoint()
-            # imageio.imwrite(f"debug_images/wrist.png", obs["pixels"]["wrist"])
-
-
-    # Convert to arrays (T, ...)
-    states_arr = np.stack(all_states)
-    actions_arr = np.stack(all_actions)
-    rewards_arr = np.stack(all_rewards)
-    top_arr = np.stack(top_frames)
-    side_arr = np.stack(side_frames)
-    wrist_arr = np.stack(wrist_frames)
-
-    if rewards_arr[-1] > 0:
-        print(f"✅ Saving episode {ep + 1}")
-        for t in range(states_arr.shape[0]):
+            # Save frame (conditionally kept if episode is saved)
             lerobot_dataset.add_frame({
-                "observation.state": states_arr[t],
-                "action": actions_arr[t],
-                "observation.image.top": top_arr[t],
-                "observation.image.side": side_arr[t],
-                "observation.image.wrist": wrist_arr[t],
+                "observation.state": pos_deg,
+                "action": act_deg,
+                "observation.image.top": obs["pixels"]["top"],
+                "observation.image.side": obs["pixels"]["side"],
+                "observation.image.wrist": obs["pixels"]["wrist"],
                 "task": "pick up the red cube and place it on top of the green cube",
             })
+
+            rewards_arr.append(reward)
+
+    # Save episode only if last reward is positive
+    if rewards_arr and rewards_arr[-1] > 0:
+        print(f"✅ Saving episode {ep + 1}")
         lerobot_dataset.save_episode()
     else:
-        print(f"🚫 Skipping episode {ep + 1} — reward was always 0")
+        print(f"🚫 Skipping episode {ep + 1} — reward was 0 at the end")
+        lerobot_dataset.clear_episode_buffer()
+        
+
+
