@@ -39,14 +39,10 @@ class CubeStackOne:
         if not gs._initialized:
             gs.init(backend=gs.gpu, precision="32")
         
-        build_house_task1(self)
+        build_house_task1(self, num_envs=num_envs, env_spacing=env_spacing)
         self.motors_dof = np.arange(5)        # arm
         self.fingers_dof = np.array([5])      # gripper
         self.eef = self.so_101.get_link("gripper")
-        # self.so_101.set_friction(4)
-        # self.cube_1.set_friction(1e-2)
-        # self.so_101.set_dofs_kp([500.0] * 5, dofs_idx_local=self.motors_dof)
-        # self.so_101.set_dofs_kv([100.0] * 5, dofs_idx_local=self.motors_dof)
 
     def _make_obs_space(self):
         #TODO: see if we should add text obs

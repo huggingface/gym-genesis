@@ -39,7 +39,7 @@ class CubeStackOne:
         if not gs._initialized:
             gs.init(backend=gs.gpu, precision="32")
         
-        build_house_task1(self)
+        build_house_task1(self, num_envs=num_envs, env_spacing=env_spacing)
         self.motors_dof = np.arange(5)        # arm
         self.fingers_dof = np.array([5])      # gripper
         self.eef = self.so_101.get_link("gripper")

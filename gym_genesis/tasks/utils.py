@@ -559,7 +559,7 @@ def build_house_task2(self):
     self.so_101 = self.scene.add_entity(
         material=gs.materials.Rigid(),
         morph=gs.morphs.MJCF(
-            file="assets/SO-ARM100/Simulation/SO101/so101.xml",
+            file="assets/robots/SO-ARM100/Simulation/SO101/so101_old_calib.xml",
             collision=True,
             pos=(-0.5, 0, 0.7),
             scale=4.0,
@@ -590,7 +590,7 @@ def build_house_task2(self):
     self.scene.build()
 
 
-def build_house_task1(self):
+def build_house_task1(self, num_envs=0, env_spacing=0):
     import imageio
     import json
     
@@ -606,7 +606,7 @@ def build_house_task1(self):
             sim_options=gs.options.SimOptions(dt=0.01),
             rigid_options=gs.options.RigidOptions(box_box_detection=True),
             viewer_options=viewer_options,
-            show_viewer=False,
+            show_viewer=True,
             vis_options=gs.options.VisOptions(
                 show_world_frame=False  # ✅ This disables the world frame XYZ arrows
             ),
@@ -730,7 +730,7 @@ def build_house_task1(self):
     self.so_101 = self.scene.add_entity(
         material=gs.materials.Rigid(),
         morph=gs.morphs.MJCF(
-            file="assets/SO-ARM100/Simulation/SO101/so101_old_calib.xml",
+            file="assets/robots/SO-ARM100/Simulation/SO101/so101_old_calib.xml",
             # file="assets/SO-ARM100_1/Simulation/SO101/so101.xml",
             collision=True,
             pos=(-0.5, 0, 0.7),
@@ -788,5 +788,7 @@ def build_house_task1(self):
         )
         self.distractor_cubes.append(cube)
 
-
-    self.scene.build()
+    if num_envs > 0:
+        self.scene.build(n_envs=num_envs, env_spacing=env_spacing)
+    else:
+        self.scene.build()

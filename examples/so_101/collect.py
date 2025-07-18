@@ -2,87 +2,251 @@ import numpy as np
 from tqdm import trange
 from pathlib import Path
 import torch
+import imageio
 import genesis as gs
 import gym_genesis
 import gymnasium as gym
-
-# === Init Genesis & Env ===
 env = gym.make(
-    "gym_genesis/CubePick-v0",
-    enable_pixels=False,
+    "gym_genesis/CubeStack-v0",
+    enable_pixels=True,
     camera_capture_mode="global",
     strip_environment_state=False,
-    num_envs=1  # single env
+    num_envs=0 # this will be ignore, nothing is batched now
 )
 env = env.unwrapped
-so_101 = env.get_robot()
-# cube = env.get_cube()
-scene = env.scene
 
-# === Friction Tuning ===
-# so_101.set_friction(2.0)
-# cube.set_friction(2.0)
-
-# === Expert Policy ===
-
-def expert_policy(robot, obs, stage):
+#     return path
+def expert_policy_v22(robot, obs, stage):
+    """
+    Expert policy with extra XY correction before release and retreat.
+    """
     eef = robot.get_link("gripper")
-    cube_pos = obs["environment_state"][:3]  # (3,) - cube center
-    quat = torch.tensor([1, 0, 0, 0], dtype=torch.float32, device=gs.device)  # hand down
+    quat = torch.tensor([1, 0, 0, 0], dtype=torch.float32, device=gs.device)
+    
+    
+    cube1_pos = obs["environment_state"][:3]
+    cube2_pos = obs["environment_state"][11:14]
 
-    grip_open = 0.4
-    grip_closed = 0.3
-    grip_hover = 0.4 # was 
+    grip_open = 0.5
+    grip_closed = 0.1
+    z_offset = 0.18
+    correction_xy = torch.tensor([-0.005, 0.02], device=gs.device)
+    # Compensate for gripper's site offset in Z
+    gripper_offset_z = -0.0981  # from <site name="gripper" ... pos="..." />
 
-    # Carefully aligned offsets
-    # Your manually scripted sequence:
-    # (0.3, 0.0, 0.02) → hover → approach → grasp → lift
+    # Correction to align center of gripper with cube2
+    gripper_xy_correction = torch.tensor([-0.005, 0.02], device=gs.device)
+
 
     if stage == "hover":
-        # Just above cube
-        target_pos = cube_pos + torch.tensor([0.1, 0.0, 4], device=gs.device)
-        grip_val = grip_hover
-    elif stage == "approach":
-        # Slightly offset X so gripper comes from the front
-        target_pos = cube_pos + torch.tensor([-0.05, 0.0, 0.2], device=gs.device)
-        grip_val = grip_hover
+        target_pos = cube1_pos + torch.tensor([-0.01, 0.0, 0.25], device=gs.device)
+        grip_val = grip_open
+    elif stage == "wake":
+        current_pos = eef.get_pos()
+        target_pos = current_pos + torch.tensor([0.0, 0.0, 0.25], device=gs.device)
+        grip_val = grip_open
     elif stage == "grasp":
-        # Same X/Y, lower Z
-        target_pos = cube_pos + torch.tensor([0.01, 0.0, 0.005], device=gs.device)
+        target_pos = cube1_pos + torch.tensor([-0.01, 0.0, 0.045], device=gs.device)
         grip_val = grip_closed
+
     elif stage == "lift":
-        # Lift straight up
-        target_pos = cube_pos + torch.tensor([0.0, 0.0, 0.3], device=gs.device)
+        target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.28], device=gs.device)
         grip_val = grip_closed
+
+    elif stage == "place":
+        target_pos = cube2_pos + torch.tensor([0.0, 0.0, z_offset], device=gs.device)
+        grip_val = grip_closed
+
+    elif stage == "position_align":
+        target_xy = cube2_pos[:2] + gripper_xy_correction
+        target_z = cube2_pos[2] + z_offset - gripper_offset_z
+        target_pos = torch.cat([target_xy, torch.tensor([target_z], device=gs.device)])
+        grip_val = grip_closed
+
+
+    elif stage == "release":
+        target_xy = cube2_pos[:2]  # stay centered
+        target_z = cube2_pos[2] + z_offset - gripper_offset_z  # correct for site offset
+        target_pos = torch.cat([target_xy, torch.tensor([target_z], device=gs.device)])
+        grip_val = grip_open
+
+
+    elif stage == "retreat":
+        target_xy = cube2_pos[:2] + correction_xy
+        target_z = cube2_pos[2] + 0.40 - gripper_offset_z  # lift up but compensate for site offset
+        target_pos = torch.cat([target_xy, torch.tensor([target_z], device=gs.device)])
+        grip_val = grip_open
+
+
     else:
         raise ValueError(f"Unknown stage: {stage}")
 
-    qpos = robot.inverse_kinematics(link=eef, pos=target_pos, quat=quat)
-    action = torch.cat([qpos[:5], torch.tensor([grip_val], device=gs.device)])
-    return action
+    # --- Waypoint interpolation ---
+    current_pos = eef.get_pos()
+    cart_wps = [(1 - alpha) * current_pos + alpha * target_pos for alpha in torch.linspace(0, 1, 8)]
 
-# === Setup Dataset ===
+    init_q = robot.get_qpos()
+    q_wps = [robot.inverse_kinematics(link=eef, pos=wp, quat=quat, init_qpos=init_q) for wp in cart_wps]
+
+    path = []
+    for i in range(len(q_wps) - 1):
+        for t in range(10):  # 10 steps between each pair
+            alpha = t / 9
+            q = (1 - alpha) * q_wps[i] + alpha * q_wps[i + 1]
+            path.append(q.clone())
+
+    # --- Gripper interpolation ---
+    if stage == "grasp":
+        for i in range(len(path) - 5):
+            path[i][-1] = grip_open
+        for i in range(len(path) - 5, len(path)):
+            alpha = (i - (len(path) - 5)) / 5
+            path[i][-1] = (1 - alpha) * grip_open + alpha * grip_closed
+    else:
+        for i in range(len(path)):
+            path[i][-1] = grip_val
+
+    return path
+
+def expert_policy_v2(robot, obs, stage):
+    """
+    Expert policy with extra XY correction before release and retreat.
+    """
+    eef = robot.get_link("gripper")
+    quat = torch.tensor([1, 0, 0, 0], dtype=torch.float32, device=gs.device)
+    
+    from scipy.spatial.transform import Rotation as R
+    r = R.from_euler('x', -90, degrees=True)
+    quat = torch.tensor(r.as_quat(), dtype=torch.float32)  
+
+    cube1_pos = obs["environment_state"][:3]
+    cube2_pos = obs["environment_state"][11:14]
+
+    grip_open = 0.5
+    grip_closed = 0.1
+    z_offset = 0.18
+    correction_xy = torch.tensor([-0.005, 0.02], device=gs.device)
+    # Compensate for gripper's site offset in Z
+    gripper_offset_z = -0.0981  # from <site name="gripper" ... pos="..." />
+
+    # Correction to align center of gripper with cube2
+    gripper_xy_correction = torch.tensor([-0.005, 0.02], device=gs.device)
 
 
-# === Run Episodes ===
-for ep in range(50):
+    if stage == "hover":
+        target_pos = cube1_pos + torch.tensor([0.01, 0.02, 0.25], device=gs.device)
+        grip_val = grip_open
+    elif stage == "wake":
+        current_pos = eef.get_pos()
+        target_pos = current_pos + torch.tensor([0.0, 0.0, 0.25], device=gs.device)
+        grip_val = grip_open
+    elif stage == "grasp":
+        target_pos = cube1_pos + torch.tensor([0.02, 0.02, 0.045], device=gs.device)
+        grip_val = grip_closed
+
+    elif stage == "lift":
+        target_pos = cube1_pos + torch.tensor([0.0, 0.0, 0.28], device=gs.device)
+        grip_val = grip_closed
+
+    elif stage == "place":
+        target_pos = cube2_pos + torch.tensor([0.006, 0.0, z_offset], device=gs.device)
+        grip_val = grip_closed
+
+    elif stage == "position_align":
+        target_xy = cube2_pos[:2] + gripper_xy_correction
+        target_z = cube2_pos[2] + z_offset - gripper_offset_z
+        target_pos = torch.cat([target_xy, torch.tensor([target_z], device=gs.device)])
+        grip_val = grip_closed
+
+
+    elif stage == "release":
+        target_xy = cube2_pos[:2]  # stay centered
+        target_z = cube2_pos[2] + z_offset - gripper_offset_z  # correct for site offset
+        target_pos = torch.cat([target_xy, torch.tensor([target_z], device=gs.device)])
+        grip_val = grip_open
+
+
+    elif stage == "retreat":
+        target_xy = cube2_pos[:2] + correction_xy
+        target_z = cube2_pos[2] + 0.40 - gripper_offset_z  # lift up but compensate for site offset
+        target_pos = torch.cat([target_xy, torch.tensor([target_z], device=gs.device)])
+        grip_val = grip_open
+
+    elif stage == "go_back":
+        # Return to initial position
+        target_pos = eef.get_pos()  # We still need a dummy pos for IK
+        grip_val = grip_open
+        qpos_tensor = torch.deg2rad(torch.tensor([0, -177, 165, 72, -83, 0], dtype=torch.float32, device=gs.device))
+        q_wps = [robot.get_qpos(), qpos_tensor]
+
+        path = []
+        for i in range(len(q_wps) - 1):
+            for t in range(10):  # Interpolate in joint space directly
+                alpha = t / 9
+                q = (1 - alpha) * q_wps[i] + alpha * q_wps[i + 1]
+                q[-1] = grip_val
+                path.append(q.clone())
+        return path
+
+    else:
+        raise ValueError(f"Unknown stage: {stage}")
+
+    # --- Waypoint interpolation ---
+    current_pos = eef.get_pos()
+    cart_wps = [(1 - alpha) * current_pos + alpha * target_pos for alpha in torch.linspace(0, 1, 8)]
+
+    init_q = robot.get_qpos()
+    q_wps = [robot.inverse_kinematics(link=eef, pos=wp, quat=quat, init_qpos=init_q) for wp in cart_wps]
+
+    path = []
+    for i in range(len(q_wps) - 1):
+        for t in range(10):  # 10 steps between each pair
+            alpha = t / 9
+            q = (1 - alpha) * q_wps[i] + alpha * q_wps[i + 1]
+            path.append(q.clone())
+
+    # --- Gripper interpolation ---
+    if stage == "grasp":
+        for i in range(len(path) - 5):
+            path[i][-1] = grip_open
+        for i in range(len(path) - 5, len(path)):
+            alpha = (i - (len(path) - 5)) / 5
+            path[i][-1] = (1 - alpha) * grip_open + alpha * grip_closed
+    else:
+        for i in range(len(path)):
+            path[i][-1] = grip_val
+
+    return path
+
+stages = ["hover", "grasp", "lift", "place", "release", "go_back"]
+    
+for ep in range(10):
     print(f"\n🎬 Starting episode {ep + 1}")
     obs, _ = env.reset()
 
-    all_agent_states, all_env_states, all_actions, all_rewards = [], [], [], []
+    rewards_arr = []
 
-    for stage in ["hover", "approach", "grasp", "lift"]:
-        for t in trange(40, leave=False):
-            print(stage)
-            action = expert_policy(so_101, obs, stage)  # (6,)
-            obs, reward, _, _, _ = env.step(action)
-            all_agent_states.append(obs["agent_pos"].cpu().numpy())        # (9,)
-            all_env_states.append(obs["environment_state"].cpu().numpy())  # (11,)
-            all_actions.append(action.cpu().numpy())                       # (6,)
-            all_rewards.append(reward)                                     # scalar
+    for stage in stages:
+        action_path = expert_policy_v2(env.get_robot(), obs, stage)
+        for action in action_path:
+            obs, reward, done, _, _ = env.step(action)
 
-    rewards_arr = np.array(all_rewards)
-    if np.any(rewards_arr > 0):
-        print(f"✅ Saving episode — reward > 0 observed")
+            rad2deg = 180 / np.pi
+            pos_deg = (obs["agent_pos"] * rad2deg).detach().cpu().numpy()
+            pos_deg[1] *= -1
+            pos_deg[4] *= -1
+
+            act_deg = (action * rad2deg).detach().cpu().numpy()
+            act_deg[1] *= -1
+            act_deg[4] *= -1
+
+            rewards_arr.append(reward)
+
+    # save episode only if last reward is positive
+    if rewards_arr and rewards_arr[-1] > 0:
+        print(f"✅ Saving episode {ep + 1}")
     else:
-        print(f"🚫 Skipping episode — reward was always 0")
+        print(f"🚫 Skipping episode {ep + 1} — reward was 0 at the end")
+
+
+

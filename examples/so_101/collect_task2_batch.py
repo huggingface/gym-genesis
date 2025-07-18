@@ -8,6 +8,7 @@ import imageio
 import genesis as gs
 import gym_genesis
 import gymnasium as gym
+import gc
 env = gym.make(
     "gym_genesis/CubeStack-v0",
     enable_pixels=True,
