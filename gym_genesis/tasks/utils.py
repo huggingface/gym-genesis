@@ -252,7 +252,7 @@ def build_house(self, num_envs, env_spacing):
             sim_options=gs.options.SimOptions(dt=0.01),
             rigid_options=gs.options.RigidOptions(box_box_detection=True),
             viewer_options=viewer_options,
-            show_viewer=True,
+            show_viewer=False,
             vis_options=gs.options.VisOptions(
                 show_world_frame=False  # ✅ This disables the world frame XYZ arrows
             ),
@@ -425,7 +425,7 @@ def build_house(self, num_envs, env_spacing):
 
     self.scene.build(n_envs=num_envs, env_spacing=env_spacing)
 
-def build_house_task2(self):
+def build_house_task_cube_pick(self):
     import imageio
     import json
 
@@ -441,9 +441,9 @@ def build_house_task2(self):
             sim_options=gs.options.SimOptions(dt=0.01),
             rigid_options=gs.options.RigidOptions(box_box_detection=True),
             viewer_options=viewer_options,
-            show_viewer=True,
+            show_viewer=False,
             vis_options=gs.options.VisOptions(
-                show_world_frame=True  # ✅ This disables the world frame XYZ arrows
+                show_world_frame=True  # disables the world frame XYZ arrows
             ),
         )
 
@@ -590,7 +590,7 @@ def build_house_task2(self):
     self.scene.build()
 
 
-def build_house_task1(self, num_envs=0, env_spacing=0):
+def build_house_task_cube_stack(self, num_envs=0, env_spacing=0):
     import imageio
     import json
     
@@ -606,7 +606,7 @@ def build_house_task1(self, num_envs=0, env_spacing=0):
             sim_options=gs.options.SimOptions(dt=0.01),
             rigid_options=gs.options.RigidOptions(box_box_detection=True),
             viewer_options=viewer_options,
-            show_viewer=True,
+            show_viewer=False,
             vis_options=gs.options.VisOptions(
                 show_world_frame=False  # ✅ This disables the world frame XYZ arrows
             ),

@@ -24,7 +24,7 @@ color_dict = {
     "yellow": (1.0, 1.0, 0.0, 1.0),
 }
 
-class CubeStack:
+class FrankaCubeStackEmptyBatch:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode, strip_environment_state):
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
@@ -99,6 +99,10 @@ class CubeStack:
         self.fingers_dof = np.arange(7, 9)
         self.eef = self.franka.get_link("hand")
 
+    def get_cams(self):
+        if not self.enable_pixels:
+            raise ValueError("Cameras are not enabled. Set `enable_pixels=True` when creating the environment.")
+        return self.cam
     def _make_obs_space(self):
         #TODO: see if we should add text obs
         if self.enable_pixels:

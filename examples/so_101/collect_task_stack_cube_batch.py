@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import trange
 from pathlib import Path
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from scipy.spatial.transform import Rotation as R
 import torch
 import imageio
@@ -11,10 +11,11 @@ import gymnasium as gym
 import gc
 env = gym.make(
     "gym_genesis/CubeStack-v0",
+    robot="so101",
     enable_pixels=True,
     camera_capture_mode="global",
     strip_environment_state=False,
-    num_envs=100,
+    num_envs=3,
     env_spacing=(10, 10),
 )
 env = env.unwrapped
@@ -224,6 +225,6 @@ for ep in range(10):
             lerobot_dataset.save_episode()
         else:
             print(f"🚫 Skipping env {b} in episode {ep + 1} — final reward was 0")
-        del states_arr, actions_arr, rewards_arr, top_arr, side_arr, wrist_arr
-        torch.cuda.empty_cache()
-        gc.collect()
+    del states_arr, actions_arr, rewards_arr, top_arr, side_arr, wrist_arr
+    torch.cuda.empty_cache()
+    gc.collect()

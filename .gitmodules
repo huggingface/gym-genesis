@@ -1,0 +1,3 @@
+[submodule "assets/robots/SO-ARM100"]
+	path = assets/robots/SO-ARM100
+	url = https://github.com/TheRobotStudio/SO-ARM100.git

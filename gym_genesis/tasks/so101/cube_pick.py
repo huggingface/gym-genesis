@@ -3,7 +3,7 @@ import numpy as np
 from gymnasium import spaces
 import random
 import torch
-from ..utils import build_house_task2
+from ..utils import build_house_task_cube_pick
 joints_name = (
     "joint1",
     "joint2",
@@ -31,7 +31,7 @@ class CubePick:
     def _build_scene(self, num_envs, env_spacing):
         if not gs._initialized:
           gs.init(backend=gs.gpu, precision="32")
-        build_house_task2(self)
+        build_house_task_cube_pick(self)
         self.motors_dof = np.arange(5)        # arm
         self.fingers_dof = np.array([5])      # gripper
         self.eef = self.so_101.get_link("gripper")
@@ -93,6 +93,10 @@ class CubePick:
         torch.cuda.manual_seed_all(seed)
         self.action_space.seed(seed)
 
+    def get_cams(self):
+        if not self.enable_pixels:
+            raise ValueError("Cameras are not enabled. Set `enable_pixels=True` when creating the environment.")
+        return self.cam
     def step(self, action):
         self.so_101.control_dofs_position(action[:5], self.motors_dof)
         self.so_101.control_dofs_position(action[5:], self.fingers_dof)

@@ -25,7 +25,7 @@ color_dict = {
     "yellow": (1.0, 1.0, 0.0, 1.0),
 }
 
-class CubeStackOne:
+class FrankaCubeStackOne:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode, strip_environment_state):
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
@@ -42,7 +42,7 @@ class CubeStackOne:
         if not gs._initialized:
             gs.init(backend=gs.gpu, precision="32")
         
-        build_house(self)
+        build_house(self, num_envs, env_spacing)
         self.motors_dof = np.arange(7)
         self.fingers_dof = np.arange(7, 9)
         self.eef = self.franka.get_link("hand")

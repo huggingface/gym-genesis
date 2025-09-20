@@ -25,7 +25,7 @@ color_dict = {
     "yellow": (1.0, 1.0, 0.0, 1.0),
 }
 
-class CubeStackKitchen:
+class FrankaCubeStackKitchenBatch:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode, strip_environment_state):
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
@@ -114,7 +114,10 @@ class CubeStackKitchen:
 
         return self.get_obs()
 
-        
+    def get_cams(self):
+        if not self.enable_pixels:
+            raise ValueError("Cameras are not enabled. Set `enable_pixels=True` when creating the environment.")
+        return self.cam_top, self.cam_side, self.cam_wrist 
     def seed(self, seed):
         np.random.seed(seed)
         random.seed(seed)

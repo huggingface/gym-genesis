@@ -4,8 +4,12 @@ import numpy as np
 from gymnasium import spaces
 import warnings
 from gym_genesis.tasks.so101.cube_pick import CubePick
-from gym_genesis.tasks.franka.cube_stack import CubeStack
 from gym_genesis.tasks.so101.cube_stack import CubeStackOne
+from gym_genesis.tasks.so101.cube_stack_batch import CubeStackBatch
+from gym_genesis.tasks.franka.cube_pick import FrankaCubePickBatch
+from gym_genesis.tasks.franka.cube_stack_one import FrankaCubeStackOne
+from gym_genesis.tasks.franka.cube_stack_kitchen_batch import FrankaCubeStackKitchenBatch
+
 class GenesisEnv(gym.Env):
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 50}
@@ -13,6 +17,7 @@ class GenesisEnv(gym.Env):
     def __init__(
             self,
             task,
+            robot="so101",
             enable_pixels = False,
             observation_height = 480,
             observation_width = 640,
@@ -24,6 +29,7 @@ class GenesisEnv(gym.Env):
     ):
         super().__init__()
         self.task = task
+        self.robot = robot
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
         self.observation_width = observation_width
@@ -55,7 +61,7 @@ class GenesisEnv(gym.Env):
     def step(self, action):
         _, reward, _, observation = self._env.step(action)
         is_success = (reward == 1)
-        terminated = np.array(is_success, dtype=bool)
+        terminated = is_success.detach().cpu().numpy().astype(bool)
         truncated = np.zeros(self.num_envs, dtype=bool)  # All False
 
         info = {"is_success": is_success} #todo: add tolist
@@ -84,29 +90,36 @@ class GenesisEnv(gym.Env):
     def get_robot(self):
         #TODO: (jadechovhari) add assertion that a robot exist
         return self._env.so_101
-
+    
+    def get_cams(self):
+        return self._env.get_cams()
+    
     def render(self):
         return self._env.cam.render()[0] if self.enable_pixels else None
     
     def _make_env_task(self, task_name):
-        if task_name == "cube_pick":
-            task = CubePick(enable_pixels=self.enable_pixels,
-                            observation_height=self.observation_height, 
-                            observation_width=self.observation_width,
-                            num_envs = self.num_envs,
-                            env_spacing = self.env_spacing,
-                            camera_capture_mode = self.camera_capture_mode,
-                            strip_environment_state=self.strip_environment_state,
-                            )
-        elif task_name == "cube_stack":
-            task = CubeStackOne(enable_pixels=self.enable_pixels,
-                            observation_height=self.observation_height, 
-                            observation_width=self.observation_width,
-                            num_envs = self.num_envs,
-                            env_spacing = self.env_spacing,
-                            camera_capture_mode = self.camera_capture_mode,
-                            strip_environment_state=self.strip_environment_state,
-                            )
-        else:
-            raise NotImplementedError(task_name)
-        return task
+        common_kwargs = dict(
+            enable_pixels=self.enable_pixels,
+            observation_height=self.observation_height,
+            observation_width=self.observation_width,
+            num_envs=self.num_envs,
+            env_spacing=self.env_spacing,
+            camera_capture_mode=self.camera_capture_mode,
+            strip_environment_state=self.strip_environment_state,
+        )
+
+        task_map = {
+            ("so101", "cube_pick", True): CubePick,  # batched (num_envs > 0)
+            ("so101", "cube_stack", True): CubeStackBatch,
+            ("so101", "cube_stack", False): CubeStackOne,
+            ("franka", "cube_pick", True): FrankaCubePickBatch,
+            ("franka", "cube_stack", True): FrankaCubeStackKitchenBatch,
+            ("franka", "cube_stack", False): FrankaCubeStackOne,
+        }
+
+        key = (self.robot, task_name, self.num_envs > 0)
+
+        if key not in task_map:
+            raise NotImplementedError(key)
+
+        return task_map[key](**common_kwargs)

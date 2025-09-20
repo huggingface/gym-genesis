@@ -8,6 +8,7 @@ import gym_genesis
 import gymnasium as gym
 env = gym.make(
     "gym_genesis/CubeStack-v0",
+    robot="so101",
     enable_pixels=True,
     camera_capture_mode="global",
     strip_environment_state=False,
@@ -220,15 +221,25 @@ def expert_policy_v2(robot, obs, stage):
 
 stages = ["hover", "grasp", "lift", "place", "release", "go_back"]
     
+import os
+import numpy as np
+import imageio
+import pickle
+
+save_root = "data_2/episodes"
+os.makedirs(save_root, exist_ok=True)
+
 for ep in range(10):
     print(f"\n🎬 Starting episode {ep + 1}")
     obs, _ = env.reset()
 
     rewards_arr = []
+    episode_states, episode_actions = [], []
+    episode_images = []
 
     for stage in stages:
         action_path = expert_policy_v2(env.get_robot(), obs, stage)
-        for action in action_path:
+        for step_id, action in enumerate(action_path):
             obs, reward, done, _, _ = env.step(action)
 
             rad2deg = 180 / np.pi
@@ -240,13 +251,40 @@ for ep in range(10):
             act_deg[1] *= -1
             act_deg[4] *= -1
 
+            episode_states.append(pos_deg)
+            episode_actions.append(act_deg)
+            episode_images.append({
+                "top": obs["pixels"]["top"],
+                "side": obs["pixels"]["side"],
+                "wrist": obs["pixels"]["wrist"]
+            })
+
             rewards_arr.append(reward)
 
-    # save episode only if last reward is positive
+    # Save only if last reward > 0
     if rewards_arr and rewards_arr[-1] > 0:
-        print(f"✅ Saving episode {ep + 1}")
+        ep_dir = os.path.join(save_root, f"episode_{ep+1:03d}")
+        os.makedirs(os.path.join(ep_dir, "images"), exist_ok=True)
+
+        print(f"✅ Saving episode {ep + 1} → {ep_dir}")
+
+        # save states/actions as numpy
+        np.save(os.path.join(ep_dir, "states.npy"), np.array(episode_states))
+        np.save(os.path.join(ep_dir, "actions.npy"), np.array(episode_actions))
+
+        # save images
+        for i, imgs in enumerate(episode_images):
+            for cam, img in imgs.items():
+                imageio.imwrite(os.path.join(ep_dir, "images", f"{i:05d}_{cam}.png"), img)
+
+        # save metadata (reward, task, etc.)
+        with open(os.path.join(ep_dir, "meta.pkl"), "wb") as f:
+            pickle.dump({
+                "task": "pick up the red cube and place it on top of the green cube",
+                "rewards": rewards_arr,
+            }, f)
+
     else:
         print(f"🚫 Skipping episode {ep + 1} — reward was 0 at the end")
-
 
 

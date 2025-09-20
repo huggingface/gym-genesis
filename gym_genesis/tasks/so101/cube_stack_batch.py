@@ -3,7 +3,7 @@ import numpy as np
 from gymnasium import spaces
 import random
 import torch
-from ..utils import build_house_task1
+from ..utils import build_house_task_cube_stack
 from scipy.spatial.transform import Rotation as R
 joints_name = (
     "main_shoulder_pan",
@@ -22,7 +22,7 @@ color_dict = {
     "yellow": (1.0, 1.0, 0.0, 1.0),
 }
 
-class CubeStackOne:
+class CubeStackBatch:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode, strip_environment_state):
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
@@ -38,8 +38,8 @@ class CubeStackOne:
     def _build_scene(self, num_envs, env_spacing):
         if not gs._initialized:
             gs.init(backend=gs.gpu, precision="32")
-        
-        build_house_task1(self, num_envs=num_envs, env_spacing=env_spacing)
+
+        build_house_task_cube_stack(self, num_envs=num_envs, env_spacing=env_spacing)
         self.motors_dof = np.arange(5)        # arm
         self.fingers_dof = np.array([5])      # gripper
         self.eef = self.so_101.get_link("gripper")
@@ -118,7 +118,11 @@ class CubeStackOne:
 
         return self.get_obs()
 
-        
+    def get_cams(self):
+        if not self.enable_pixels:
+            raise ValueError("Cameras are not enabled. Set `enable_pixels=True` when creating the environment.")
+        return self.cam_top, self.cam_side, self.cam_wrist
+
     def seed(self, seed):
         np.random.seed(seed)
         random.seed(seed)
@@ -147,78 +151,76 @@ class CubeStackOne:
         # Boolean condition: close in XY and lifted in Z
         reward = (xy_dist < 0.05) & (z_diff > 0.03)  # shape: (B,), bool
         return reward.float()  # shape: (B,), float
-
-
     
-def get_obs(self):
-    B = self.num_envs
+    def get_obs(self):
+        B = self.num_envs
 
-    eef_pos = self.eef.get_pos()             # (B, 3)
-    eef_rot = self.eef.get_quat()            # (B, 4)
-    gripper = self.so_101.get_dofs_position()[:, 5:]  # (B, 1)
+        eef_pos = self.eef.get_pos()             # (B, 3)
+        eef_rot = self.eef.get_quat()            # (B, 4)
+        gripper = self.so_101.get_dofs_position()[:, 5:]  # (B, 1)
 
-    cube1_pos = self.cube_1.get_pos()        # (B, 3)
-    cube1_rot = self.cube_1.get_quat()       # (B, 4)
-    cube2_pos = self.cube_2.get_pos()        # (B, 3)
+        cube1_pos = self.cube_1.get_pos()        # (B, 3)
+        cube1_rot = self.cube_1.get_quat()       # (B, 4)
+        cube2_pos = self.cube_2.get_pos()        # (B, 3)
 
-    diff = eef_pos - cube1_pos               # (B, 3)
-    dist = torch.norm(diff, dim=1, keepdim=True)  # (B, 1)
+        diff = eef_pos - cube1_pos               # (B, 3)
+        dist = torch.norm(diff, dim=1, keepdim=True)  # (B, 1)
 
-    agent_pos = self.so_101.get_qpos()       # (B, 6)
-    # Alternatively use:
-    # agent_pos = torch.cat([eef_pos, eef_rot, gripper], dim=1)  # (B, 8)
+        agent_pos = self.so_101.get_qpos()       # (B, 6)
+        # Alternatively use:
+        # agent_pos = torch.cat([eef_pos, eef_rot, gripper], dim=1)  # (B, 8)
 
-    environment_state = torch.cat([cube1_pos, cube1_rot, diff, dist, cube2_pos], dim=1)  # (B, 14)
+        environment_state = torch.cat([cube1_pos, cube1_rot, diff, dist, cube2_pos], dim=1)  # (B, 14)
 
-    obs = {
-        "agent_pos": agent_pos.float(),                 # (B, 6)
-        "environment_state": environment_state.float(), # (B, 14)
-    }
-
-    if self.enable_pixels:
-        if self.strip_environment_state:
-            del obs["environment_state"]
-
-        top_imgs, side_imgs, wrist_imgs = [], [], []
-
-        for i in range(B):
-            # --- top camera ---
-            pos_top = self.scene.envs_offset[i] + np.array([-0.05, 0.0, 1.8])
-            lookat_top = self.scene.envs_offset[i] + np.array([-0.2, 0.0, 0.5])
-            self.cam_top.set_pose(pos=pos_top, lookat=lookat_top)
-            top_imgs.append(self.cam_top.render()[0])
-
-            # --- side camera ---
-            pos_side = self.scene.envs_offset[i] + np.array([0.07, -1.0, 1.6])
-            lookat_side = self.scene.envs_offset[i] + np.array([-0.08, 0.0, 0.7])
-            self.cam_side.set_pose(pos=pos_side, lookat=lookat_side)
-            side_imgs.append(self.cam_side.render()[0])
-
-            # --- wrist camera ---
-            env_offset = self.scene.envs_offset[i]
-            wrist_link = self.so_101.get_link("gripper", i)
-            wrist_pos = wrist_link.get_pos()
-            wrist_quat = wrist_link.get_quat().cpu().numpy()[i]
-            wrist_rot = R.from_quat(wrist_quat, scalar_first=True)
-            camera_rot = wrist_rot * R.from_euler("x", -np.pi / 2 + 0.8)
-            camera_pos = wrist_pos[i].cpu().numpy() + np.array([0.09, 0.0, -0.08]) + env_offset
-
-            cam_tf = np.eye(4)
-            cam_tf[:3, :3] = camera_rot.as_matrix()
-            cam_tf[:3, 3] = camera_pos
-            self.cam_wrist.set_pose(cam_tf)
-
-            wrist_img = self.cam_wrist.render()[0]
-            wrist_imgs.append(np.rot90(wrist_img, k=2))
-
-        pixels = {
-            "top": np.stack(top_imgs, axis=0),
-            "side": np.stack(side_imgs, axis=0),
-            "wrist": np.stack(wrist_imgs, axis=0),
+        obs = {
+            "agent_pos": agent_pos.float(),                 # (B, 6)
+            "environment_state": environment_state.float(), # (B, 14)
         }
 
-        for name, img in pixels.items():
-            assert img.ndim == 4, f"{name} image must be (B, H, W, 3), got {img.shape}"
-        obs["pixels"] = pixels
+        if self.enable_pixels:
+            if self.strip_environment_state:
+                del obs["environment_state"]
 
-    return obs
+            top_imgs, side_imgs, wrist_imgs = [], [], []
+
+            for i in range(B):
+                # --- top camera ---
+                pos_top = self.scene.envs_offset[i] + np.array([-0.05, 0.0, 1.8])
+                lookat_top = self.scene.envs_offset[i] + np.array([-0.2, 0.0, 0.5])
+                self.cam_top.set_pose(pos=pos_top, lookat=lookat_top)
+                top_imgs.append(self.cam_top.render()[0])
+
+                # --- side camera ---
+                pos_side = self.scene.envs_offset[i] + np.array([0.07, -1.0, 1.6])
+                lookat_side = self.scene.envs_offset[i] + np.array([-0.08, 0.0, 0.7])
+                self.cam_side.set_pose(pos=pos_side, lookat=lookat_side)
+                side_imgs.append(self.cam_side.render()[0])
+
+                # --- wrist camera ---
+                env_offset = self.scene.envs_offset[i]
+                wrist_link = self.so_101.get_link("gripper", i)
+                wrist_pos = wrist_link.get_pos()
+                wrist_quat = wrist_link.get_quat().cpu().numpy()[i]
+                wrist_rot = R.from_quat(wrist_quat, scalar_first=True)
+                camera_rot = wrist_rot * R.from_euler("x", -np.pi / 2 + 0.8)
+                camera_pos = wrist_pos[i].cpu().numpy() + np.array([0.09, 0.0, -0.08]) + env_offset
+
+                cam_tf = np.eye(4)
+                cam_tf[:3, :3] = camera_rot.as_matrix()
+                cam_tf[:3, 3] = camera_pos
+                self.cam_wrist.set_pose(cam_tf)
+
+                wrist_img = self.cam_wrist.render()[0]
+                wrist_imgs.append(np.rot90(wrist_img, k=2))
+
+            pixels = {
+                "top": np.stack(top_imgs, axis=0),
+                "side": np.stack(side_imgs, axis=0),
+                "wrist": np.stack(wrist_imgs, axis=0),
+            }
+
+            for name, img in pixels.items():
+                assert img.ndim == 4, f"{name} image must be (B, H, W, 3), got {img.shape}"
+            obs["pixels"] = pixels
+
+        return obs

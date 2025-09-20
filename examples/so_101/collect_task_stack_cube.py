@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import trange
 from pathlib import Path
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
 import torch
 import imageio
 import genesis as gs
@@ -9,10 +9,11 @@ import gym_genesis
 import gymnasium as gym
 env = gym.make(
     "gym_genesis/CubeStack-v0",
+    robot="so101",
     enable_pixels=True,
     camera_capture_mode="global",
     strip_environment_state=False,
-    num_envs=3 # this will be ignore, nothing is batched now
+    num_envs=0 # here unbatched b
 )
 env = env.unwrapped
 
@@ -273,7 +274,7 @@ lerobot_dataset = LeRobotDataset.create(
 )
 
 stages = ["hover", "grasp", "lift", "place", "release", "go_back"]
- 
+
 for ep in range(10):
     print(f"\n🎬 Starting episode {ep + 1}")
     obs, _ = env.reset()
@@ -294,15 +295,15 @@ for ep in range(10):
             act_deg[1] *= -1
             act_deg[4] *= -1
 
-            # Save frame (conditionally kept if episode is saved)
+            # # Save frame (conditionally kept if episode is saved)
             lerobot_dataset.add_frame({
                 "observation.state": pos_deg,
                 "action": act_deg,
                 "observation.image.top": obs["pixels"]["top"],
                 "observation.image.side": obs["pixels"]["side"],
                 "observation.image.wrist": obs["pixels"]["wrist"],
-                "task": "pick up the red cube and place it on top of the green cube",
-            })
+            },
+            task="pick up the red cube and place it on top of the green cube",)
 
             rewards_arr.append(reward)
 

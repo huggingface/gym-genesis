@@ -9,6 +9,7 @@ import gymnasium as gym
 GRASP_OFFSET = 0.01
 env = gym.make(
     "gym_genesis/CubeStack-v0",
+    robot="franka",
     enable_pixels=True,
     camera_capture_mode="global",
     strip_environment_state=False,
@@ -105,7 +106,6 @@ lerobot_dataset = LeRobotDataset.create(
 
 
 #### Example for state only data collection
-# === Run Episodes ===
 # === Run Episodes ===
 for ep in range(10):
     print(f"\n🎬 Starting episode {ep + 1}")

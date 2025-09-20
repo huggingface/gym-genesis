@@ -1,14 +1,17 @@
 import numpy as np
 from tqdm import trange
-import torch
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from pathlib import Path
+import torch
 import gym_genesis
 import gymnasium as gym
 
 env = gym.make(
     "gym_genesis/CubePick-v0",
-    enable_pixels=False,
+    robot="franka",
+    enable_pixels=True,
+    camera_capture_mode="per_env",
+    strip_environment_state=False
 )
 env = env.unwrapped
 
@@ -22,7 +25,7 @@ def expert_policy(robot, observation, stage):
     B = agent_pos.shape[0]
     device = agent_pos.device
 
-    cube_pos = environment_state[:, :3] # (B, 3)
+    cube_pos = environment_state[:, :3]              # (B, 3)
     finder_pos = -0.02
 
     quat = torch.tensor([0, 1, 0, 0], dtype=torch.float32, device=device).expand(B, -1)  # (B, 4)
@@ -41,15 +44,15 @@ def expert_policy(robot, observation, stage):
     else:
         raise ValueError(f"Unknown stage: {stage}")
 
-    # === batched IK ===
+    # === Batched IK ===
     qpos = robot.inverse_kinematics(
         link=eef,
         pos=target_pos,       # (B, 3)
         quat=quat,            # (B, 4)
         envs_idx=torch.arange(B, device=device)
-    )  # (B, 9)
+    )  # (B, 9), still on GPU
 
-    action = torch.cat([qpos[:, :-2], grip], dim=1)  # (B, 9)
+    action = torch.cat([qpos[:, :-2], grip], dim=1)  # (B, 9), still on GPU
     return action
 
 # === Setup Dataset ===
@@ -65,12 +68,11 @@ lerobot_dataset = LeRobotDataset.create(
     use_videos=True,
     features={
         "observation.agent_pos": {"dtype": "float32", "shape": agent_shape}, 
-        "observation.environment_state": {"dtype": "float32", "shape": env_shape},
         "action": {"dtype": "float32", "shape": action_shape},
+        "observation.image": {"dtype": "video", "shape": (480, 640, 3)},
     },
 )
 
-#### Example for state only data collection
 # === Run Episodes ===
 for ep in range(50):
     print(f"\n🎬 Starting episode {ep+1}")
@@ -80,22 +82,22 @@ for ep in range(50):
     num_envs = obs["agent_pos"].shape[0]   # (B, 20) if batched
 
     # Store all frames for this episode
-    all_agent_states, all_env_states, all_actions, all_rewards = [], [], [], []
+    all_agent_states, all_images, all_actions, all_rewards = [], [], [], []
 
     for stage in ["hover", "stabilize", "grasp", "grasp", "lift"]:
         for t in trange(40, leave=False):
             action = expert_policy(env.get_robot(), obs, stage)         # (B, 9)
             obs, reward, done, _, info = env.step(action)  # obs: dict of batched arrays
-            all_agent_states.append(obs["agent_pos"].detach().cpu().numpy())             # (B, agent_dim)
-            all_env_states.append(obs["environment_state"].detach().cpu().numpy())        # (B, env_dim)
+            all_agent_states.append(obs["agent_pos"].detach().cpu().numpy())              # (B, agent_dim)
+            all_images.append(obs["pixels"])       # (B, H, W, 3)
             all_actions.append(action.detach().cpu().numpy())             # (B, 9)
             all_rewards.append(reward)             # (B,)
 
     # Convert to arrays (T, B, ...)
     #FIXME: system ram crash if B is too big
     agent_states_arr = np.stack(all_agent_states)      # (T, B, agent_dim)
-    env_states_arr = np.stack(all_env_states)          # (T, B, env_dim)
     actions_arr = np.stack(all_actions)    # (T, B, 9)
+    images_arr = np.stack(all_images)      # (T, B, H, W, 3)
     rewards_arr = np.stack(all_rewards)    # (T, B)
 
     # Save episodes where reward > 0 for each env in batch
@@ -106,8 +108,8 @@ for ep in range(50):
             for t in range(rewards_arr.shape[0]):
                 lerobot_dataset.add_frame({
                     "observation.state": agent_states_arr[t, b].astype(np.float32),
-                    "observation.environment_state": env_states_arr[t, b].astype(np.float32),
                     "action": actions_arr[t, b].astype(np.float32),
+                    "observation.image": images_arr[t, b],
                     "task": "pick cube",
                 })
             lerobot_dataset.save_episode()

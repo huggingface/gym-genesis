@@ -3,7 +3,7 @@ import numpy as np
 from gymnasium import spaces
 import random
 import torch
-from ..utils import build_house_task1
+from ..utils import build_house_task_cube_stack
 
 joints_name = (
     "main_shoulder_pan",
@@ -38,8 +38,8 @@ class CubeStackOne:
     def _build_scene(self, num_envs, env_spacing):
         if not gs._initialized:
             gs.init(backend=gs.gpu, precision="32")
-        
-        build_house_task1(self, num_envs=num_envs, env_spacing=env_spacing)
+
+        build_house_task_cube_stack(self, num_envs=0, env_spacing=env_spacing)
         self.motors_dof = np.arange(5)        # arm
         self.fingers_dof = np.array([5])      # gripper
         self.eef = self.so_101.get_link("gripper")
@@ -106,7 +106,11 @@ class CubeStackOne:
             self.cam_wrist.start_recording()
 
         return self.get_obs()
-        
+    
+    def get_cams(self):
+        if not self.enable_pixels:
+            raise ValueError("Cameras are not enabled. Set `enable_pixels=True` when creating the environment.")
+        return self.cam_top, self.cam_side, self.cam_wrist
     def seed(self, seed):
         np.random.seed(seed)
         random.seed(seed)

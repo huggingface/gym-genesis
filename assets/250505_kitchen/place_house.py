@@ -255,7 +255,7 @@ def genesis_house():
     scene = gs.Scene(
         sim_options=gs.options.SimOptions(dt=0.002, substeps=20),
         viewer_options=viewer_options,
-        show_viewer=True,
+        show_viewer=False,
         rigid_options=gs.options.RigidOptions(
             gravity=(0, 0, -9.8),
             enable_collision=True,

@@ -18,7 +18,7 @@ joints_name = (
 AGENT_DIM = len(joints_name)
 ENV_DIM = 11
 
-class CubePick:
+class FrankaCubePickBatch:
     def __init__(self, enable_pixels, observation_height, observation_width, num_envs, env_spacing, camera_capture_mode, strip_environment_state):
         self.enable_pixels = enable_pixels
         self.observation_height = observation_height
@@ -66,7 +66,10 @@ class CubePick:
         self.motors_dof = np.arange(7)
         self.fingers_dof = np.arange(7, 9)
         self.eef = self.franka.get_link("hand")
-
+    def get_cams(self):
+        if not self.enable_pixels:
+            raise ValueError("Cameras are not enabled. Set `enable_pixels=True` when creating the environment.")
+        return self.cam
     def _make_obs_space(self):
         if self.enable_pixels:
             # we explicity remove the need of environment_state
