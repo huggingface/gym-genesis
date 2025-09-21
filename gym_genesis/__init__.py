@@ -7,6 +7,7 @@ register(
     nondeterministic=False,
     kwargs={
         "task": "cube_pick",
+        "robot": "so101",
         "enable_pixels": False,
         "num_envs": 10,
         "observation_height": 480,
@@ -24,6 +25,7 @@ register(
     nondeterministic=False,
     kwargs={
         "task": "cube_stack",
+        "robot": "so101",
         "enable_pixels": False,
         "num_envs": 10,
         "observation_height": 480,
